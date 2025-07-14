@@ -1,10 +1,19 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const multer = require("multer");
-const analyzeController = require("../Controllers/analyzeController");
-const auth = require("../middleware/authMiddleware");
-const upload = multer({ dest: "uploads/" });
+const analyzeController = require('../Controllers/analyzeController');
+const jdController = require('../Controllers/jdController');
+const transactionController = require('../Controllers/transactionController');
+const authMiddleware = require('../middleware/authMiddleware');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
-router.post("/analyze", auth,upload.single("resume"), analyzeController.analyze);
+// Analyze resume
+router.post('/analyze', authMiddleware, upload.single('resume'), analyzeController.analyze);
+
+// Get all JDs for user
+router.get('/jds', authMiddleware, jdController.getUserJDs);
+
+// Get all transactions for a JD
+router.get('/transactions', authMiddleware, transactionController.getTransactionsByJD);
 
 module.exports = router;

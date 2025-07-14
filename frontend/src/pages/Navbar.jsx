@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Navbar.css';
-import { FaSignInAlt, FaSignOutAlt, FaBars, FaTimes, FaUserCircle } from 'react-icons/fa';
+import { FaSignInAlt, FaSignOutAlt, FaBars, FaTimes, FaUserCircle, FaChartBar } from 'react-icons/fa';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,7 +35,10 @@ const Navbar = () => {
           <li><Link to="/mock-interview" onClick={handleLinkClick}>Mock Interview</Link></li>
           <li><Link to="/dashboard" onClick={handleLinkClick}>Dashboard</Link></li>
           {token && (
-            <li><Link to="/profile" onClick={handleLinkClick}><FaUserCircle style={{ marginRight: 4 }} />Profile</Link></li>
+            <>
+              <li><Link to="/ats-analysis" onClick={handleLinkClick}><FaChartBar style={{ marginRight: 4 }} />ATS Analysis</Link></li>
+              <li><Link to="/profile" onClick={handleLinkClick}><FaUserCircle style={{ marginRight: 4 }} />Profile</Link></li>
+            </>
           )}
         </ul>
         <div className="navbar-auth">

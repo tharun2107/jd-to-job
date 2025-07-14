@@ -1,35 +1,30 @@
 const mongoose = require("mongoose");
 
 const TransactionSchema = new mongoose.Schema({
-  // userId: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "User",
-  //   required: true,
-  // },
-  // jobTitle: String,
-  // jobDescription: String,
-  // resumeText: String,
-  // matchedSkills: [String],
-  // missingSkills: [String],
-  // score: Number,
-userId: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  jdText: { type: String, required: true },
+  jdId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JD',
+    required: true
+  },
+  resumeMeta: {
+    filename: String,
+    uploadedAt: { type: Date, default: Date.now }
+  },
   ats: {
     score: Number,
     matchedSkills: [String],
     missingSkills: [String],
     jdSkills: [String],
-    groupedResumeSkills: Object,       // flexible
+    groupedResumeSkills: Object,
     groupedJdSkills: Object,
     groupedMissingSkills: Object,
     resumeSkillsBySection: Object
   },
-
-  // ✅ Resources per skill
   skillRecommendations: [
     {
       skill: String,
@@ -48,8 +43,6 @@ userId: {
       ]
     }
   ],
-
-  // ✅ Mock exam attempts
   mockExams: [
     {
       attemptNumber: Number,
@@ -66,8 +59,6 @@ userId: {
       score: Number
     }
   ],
-
-  // ✅ Mock interview feedback
   mockInterviews: [
     {
       date: { type: Date, default: Date.now },
@@ -80,7 +71,6 @@ userId: {
       interviewer: String
     }
   ],
-
   createdAt: {
     type: Date,
     default: Date.now,
