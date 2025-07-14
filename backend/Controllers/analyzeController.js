@@ -96,8 +96,25 @@ exports.analyze = async (req, res) => {
       transactionId: transaction._id,
       score: atsResult?.score,
       matchedSkills: atsResult?.matched_skills,
-      missingSkills: atsResult?.missing_skills
+      missingSkills: atsResult?.missing_skills,
+      groupedResumeSkills: atsResult?.grouped_resume_skills,
+      groupedJdSkills: atsResult?.grouped_jd_skills,
+      groupedMissingSkills: atsResult?.grouped_missing_skills,
+      resumeSkillsBySection: atsResult?.resume_skills_by_section,
+      jdSkills: atsResult?.jd_skills
     });
+    console.log("🔗 Response sent to frontend:", JSON.stringify({
+      message: "Saved successfully",
+      transactionId: transaction._id,
+      score: atsResult?.score,
+      matchedSkills: atsResult?.matched_skills,
+      missingSkills: atsResult?.missing_skills,
+      groupedResumeSkills: atsResult?.grouped_resume_skills,
+      groupedJdSkills: atsResult?.grouped_jd_skills,
+      groupedMissingSkills: atsResult?.grouped_missing_skills,
+      resumeSkillsBySection: atsResult?.resume_skills_by_section,
+      jdSkills: atsResult?.jd_skills
+    }, null, 2));
 
   } catch (err) {
     console.error("🔥 Error in analyze controller:");

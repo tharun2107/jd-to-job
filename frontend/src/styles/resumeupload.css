@@ -1,0 +1,82 @@
+.resume-upload-root {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #f5f5f5 0%, #eaeaea 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.resume-upload-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  padding: 48px 36px 36px 36px;
+  min-width: 320px;
+  max-width: 600px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: uploadPop 0.3s cubic-bezier(.4,2,.6,1);
+}
+@keyframes uploadPop {
+  from { transform: scale(0.92) translateY(40px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.resume-upload-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: #0d6efd;
+  text-align: center;
+}
+.resume-upload-form {
+  width: 100%;
+}
+.resume-upload-lottie {
+  margin: 32px auto 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.result-box-animated {
+  animation: fadeInResult 0.7s cubic-bezier(.4,2,.6,1);
+}
+@keyframes fadeInResult {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.card-header, .card-body {
+  border-radius: 12px;
+}
+.badge {
+  font-size: 1rem;
+  padding: 0.5em 1em;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.bg-success {
+  background: #28a745 !important;
+  color: #fff !important;
+}
+.bg-danger {
+  background: #dc3545 !important;
+  color: #fff !important;
+}
+.bg-secondary {
+  background: #6c757d !important;
+  color: #fff !important;
+}
+@media (max-width: 600px) {
+  .resume-upload-card {
+    min-width: 90vw;
+    max-width: 98vw;
+    padding: 18px 6vw 18px 6vw;
+  }
+  .resume-upload-title {
+    font-size: 1.1rem;
+  }
+} 

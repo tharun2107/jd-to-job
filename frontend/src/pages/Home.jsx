@@ -1,284 +1,162 @@
-// // src/pages/Home.js
-// import React from "react";
-
-// const Home = () => {
-//   const user = JSON.parse(localStorage.getItem("user"));
-
-//   const logout = () => {
-//     localStorage.clear();
-//     window.location.href = "/login";
-//   };
-
-//   return (
-//     <div className="container text-center mt-5">
-//       <h2>Welcome, {user?.name}</h2>
-//       <img src={user?.profilePic} alt="Profile" width="100" className="rounded-circle" />
-//       <p>{user?.email}</p>
-//       <button className="btn btn-danger mt-3" onClick={logout}>Logout</button>
-//     </div>
-//   );
-// };
-
-// export default Home;
-
-// import React from "react";
-// import { Rocket, Star, Activity, Layers, Lightbulb } from "lucide-react";
-// import { Button } from "../components/ui/Button";
-// import { motion } from "framer-motion";
-
-// const features = [
-//   {
-//     icon: <Rocket className="text-primary" size={32} />,
-//     title: "AI Resume Match",
-//     desc: "Match your resume with job descriptions using AI and get instant scores.",
-//   },
-//   {
-//     icon: <Activity className="text-success" size={32} />,
-//     title: "Mock Exams",
-//     desc: "Take JD-specific mock tests to sharpen your skills before applying.",
-//   },
-//   {
-//     icon: <Star className="text-warning" size={32} />,
-//     title: "Interview Feedback",
-//     desc: "Practice mock interviews and get personalized feedback.",
-//   },
-//   {
-//     icon: <Lightbulb className="text-info" size={32} />,
-//     title: "Insights & Resources",
-//     desc: "Access curated resources to fill your skill gaps.",
-//   },
-//   {
-//     icon: <Layers className="text-danger" size={32} />,
-//     title: "Track Progress",
-//     desc: "See your growth over time with detailed dashboards.",
-//   },
-// ];
-
-// export default function HomePage() {
-//   return (
-//     <div className="bg-dark text-light">
-//       {/* Navbar */}
-//       <nav className="navbar navbar-expand-lg navbar-dark bg-black sticky-top shadow">
-//         <div className="container-fluid">
-//           <a className="navbar-brand fw-bold" href="#">CareerForge 🚀</a>
-//           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-//             <span className="navbar-toggler-icon" />
-//           </button>
-//           <div className="collapse navbar-collapse" id="navbarNav">
-//             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-//               <li className="nav-item"><a className="nav-link" href="#about">About</a></li>
-//               <li className="nav-item"><a className="nav-link" href="#features">Features</a></li>
-//               <li className="nav-item"><a className="nav-link" href="#contact">Contact</a></li>
-//             </ul>
-//             <Button className="btn btn-primary">Login</Button>
-//           </div>
-//         </div>
-//       </nav>
-
-//       {/* Hero */}
-//       <section className="container py-5 d-flex flex-column flex-md-row align-items-center justify-content-between">
-//         <div className="col-md-6">
-//           <motion.h1
-//             className="display-4 fw-bold"
-//             initial={{ opacity: 0, y: -50 }}
-//             animate={{ opacity: 1, y: 0 }}
-//             transition={{ duration: 1 }}
-//           >
-//             Your Career, Supercharged ⚡
-//           </motion.h1>
-//           <p className="lead mt-3 text-light">
-//             We help you conquer job descriptions with intelligent resume matching, personalized mock tests, and interview prep tailored for success.
-//           </p>
-//           <Button className="btn btn-primary btn-lg mt-3">Get Started Now</Button>
-//         </div>
-//         <motion.img
-//           src="https://source.unsplash.com/720x600/?startup,tech"
-//           alt="Hero"
-//           className="img-fluid rounded-4 shadow-lg mt-5 mt-md-0"
-//           initial={{ opacity: 0 }}
-//           animate={{ opacity: 1 }}
-//           transition={{ delay: 0.5 }}
-//         />
-//       </section>
-
-//       {/* Features */}
-//       <section id="features" className="bg-black py-5">
-//         <div className="container">
-//           <h2 className="text-center mb-5 display-5 fw-bold">Features</h2>
-//           <div className="row">
-//             {features.map((feat, index) => (
-//               <motion.div
-//                 key={index}
-//                 className="col-md-4 mb-4"
-//                 whileHover={{ scale: 1.05 }}
-//                 transition={{ duration: 0.3 }}
-//               >
-//                 <div className="card bg-dark text-light h-100 p-3 border-secondary">
-//                   <div className="mb-3">{feat.icon}</div>
-//                   <h5 className="card-title">{feat.title}</h5>
-//                   <p className="card-text">{feat.desc}</p>
-//                 </div>
-//               </motion.div>
-//             ))}
-//           </div>
-//         </div>
-//       </section>
-
-//       {/* About */}
-//       <section id="about" className="bg-secondary py-5">
-//         <div className="container text-center text-white">
-//           <h2 className="display-5 fw-bold">About Us</h2>
-//           <p className="lead mt-3">
-//             CareerForge is more than a tool — it’s your career accelerator.
-//             We combine AI with expert insights to help you land your dream job faster.
-//           </p>
-//         </div>
-//       </section>
-
-//       {/* Footer */}
-//       <footer id="contact" className="bg-black text-center text-muted py-3">
-//         &copy; {new Date().getFullYear()} CareerForge. All rights reserved.
-//       </footer>
-//     </div>
-//   );
-// }
-
-// import React, { useState } from "react";
-// import { Rocket, Star, Activity, Layers, Lightbulb } from "lucide-react";
-// import { motion } from "framer-motion";
-// import { Button } from "../components/ui/Button";
-// import Lottie from "lottie-react";
-// import animationData from "../assets/tech-parallex.json"
-// import Navbar from "./Navbar";
-// const features = [
-//   {
-//     icon: <Rocket className="text-primary" size={32} />,
-//     title: "AI Resume Match",
-//     desc: "Match your resume with job descriptions using AI and get instant scores.",
-//   },
-//   {
-//     icon: <Activity className="text-success" size={32} />,
-//     title: "Mock Exams",
-//     desc: "Take JD-specific mock tests to sharpen your skills before applying.",
-//   },
-//   {
-//     icon: <Star className="text-warning" size={32} />,
-//     title: "Interview Feedback",
-//     desc: "Practice mock interviews and get personalized feedback.",
-//   },
-//   {
-//     icon: <Lightbulb className="text-info" size={32} />,
-//     title: "Insights & Resources",
-//     desc: "Access curated resources to fill your skill gaps.",
-//   },
-//   {
-//     icon: <Layers className="text-danger" size={32} />,
-//     title: "Track Progress",
-//     desc: "See your growth over time with detailed dashboards.",
-//   },
-// ];
-
-// export default function HomePage() {
-//   const [navOpen, setNavOpen] = useState(false);
-
-//   return (
-//     <div className="bg-dark text-light">
-
-// <Navbar/>
-
-//       {/* Hero */}
-//       <section className="container py-5 d-flex flex-column flex-lg-row align-items-center justify-content-between">
-//         <div className="col-lg-6 text-center text-lg-start">
-//           <motion.h1
-//             className="display-4 fw-bold"
-//             initial={{ opacity: 0, y: -50 }}
-//             animate={{ opacity: 1, y: 0 }}
-//             transition={{ duration: 1 }}
-//           >
-//             Your Career, Supercharged ⚡
-//           </motion.h1>
-//           <p className="lead mt-3">
-//             We help you conquer job descriptions with intelligent resume matching, personalized mock tests, and interview prep tailored for success.
-//           </p>
-//           <Button className="btn btn-primary btn-lg mt-3">Get Started Now</Button>
-//         </div>
-//         <motion.div
-//           className="col-lg-6 mt-5 mt-lg-0 text-center"
-//           initial={{ opacity: 0 }}
-//           animate={{ opacity: 1 }}
-//           transition={{ delay: 0.5 }}
-//         >
-//           <Lottie animationData={animationData} style={{ height: "auto", maxHeight: 400, width: "100%" }} />
-//         </motion.div>
-//       </section>
-
-//       {/* Features */}
-//       <section id="features" className="bg-black py-5">
-//         <div className="container">
-//           <h2 className="text-center mb-5 display-5 fw-bold">Features</h2>
-//           <div className="row">
-//             {features.map((feat, index) => (
-//               <motion.div
-//                 key={index}
-//                 className="col-12 col-md-6 col-lg-4 mb-4"
-//                 whileHover={{ scale: 1.05 }}
-//                 transition={{ duration: 0.3 }}
-//               >
-//                 <div className="card bg-dark text-light h-100 p-3 border-secondary">
-//                   <div className="mb-3">{feat.icon}</div>
-//                   <h5 className="card-title">{feat.title}</h5>
-//                   <p className="card-text">{feat.desc}</p>
-//                 </div>
-//               </motion.div>
-//             ))}
-//           </div>
-//         </div>
-//       </section>
-
-//       {/* About */}
-//       <section id="about" className="py-5" style={{ background: "linear-gradient(135deg, #1c1c1c, #2b2b2b)" }}>
-//         <div className="container text-center text-white">
-//           <h2 className="display-5 fw-bold mb-4">About Us</h2>
-//           <p className="lead px-3 px-md-5">
-//             CareerForge is more than a tool — it’s your career accelerator.
-//             We combine AI with expert insights to help you land your dream job faster.
-//             Analyze your resume, take mock tests, prepare for interviews and level up — all in one place.
-//           </p>
-//         </div>
-//       </section>
-
-//       {/* Footer */}
-//       <footer id="contact" className="bg-black text-center text-muted py-3">
-//         &copy; {new Date().getFullYear()} CareerForge. All rights reserved.
-//       </footer>
-//     </div>
-//   );
-// }
-
 import React from 'react';
+import Lottie from 'lottie-react';
+import animationData from '../assets/tech-parallex.json';
+import '../styles/landingpage.css';
+import { Button } from '../components/ui/Button';
+import { Rocket, Star, Activity, Layers, Lightbulb, Users, HelpCircle, MessageCircle } from 'lucide-react';
+
+const features = [
+  {
+    icon: <Rocket size={32} color="#0d6efd" />, title: 'AI Resume Match', desc: 'Match your resume with job descriptions using AI and get instant scores.'
+  },
+  {
+    icon: <Activity size={32} color="#28a745" />, title: 'Mock Exams', desc: 'Take JD-specific mock tests to sharpen your skills before applying.'
+  },
+  {
+    icon: <Star size={32} color="#ffc107" />, title: 'Interview Feedback', desc: 'Practice mock interviews and get personalized feedback.'
+  },
+  {
+    icon: <Lightbulb size={32} color="#17a2b8" />, title: 'Insights & Resources', desc: 'Access curated resources to fill your skill gaps.'
+  },
+  {
+    icon: <Layers size={32} color="#dc3545" />, title: 'Track Progress', desc: 'See your growth over time with detailed dashboards.'
+  },
+];
+
+const howItWorks = [
+  { step: 1, title: 'Upload Resume', desc: 'Easily upload your resume and job description.' },
+  { step: 2, title: 'AI Analysis', desc: 'Our AI matches your skills and highlights gaps.' },
+  { step: 3, title: 'Practice & Improve', desc: 'Take mock tests and interviews to level up.' },
+  { step: 4, title: 'Track Progress', desc: 'Monitor your growth with dashboards.' },
+];
+
+const testimonials = [
+  { name: 'Amit S.', role: 'Software Engineer', quote: 'NextHire helped me land my dream job with its AI-powered feedback and mock interviews!' },
+  { name: 'Priya R.', role: 'Data Analyst', quote: 'The resume matcher and resources are top-notch. Highly recommended!' },
+  { name: 'John D.', role: 'Product Manager', quote: 'The dashboard and progress tracking kept me motivated throughout my job search.' },
+];
+
+const team = [
+  { name: 'Rohit Sharma', role: 'Founder & CEO', img: 'https://randomuser.me/api/portraits/men/32.jpg' },
+  { name: 'Sneha Patel', role: 'CTO', img: 'https://randomuser.me/api/portraits/women/44.jpg' },
+  { name: 'Alex Kim', role: 'Lead Designer', img: 'https://randomuser.me/api/portraits/men/65.jpg' },
+];
+
+const faqs = [
+  { q: 'How does the AI resume matcher work?', a: 'It analyzes your resume and compares it to job descriptions using advanced NLP.' },
+  { q: 'Is my data secure?', a: 'Absolutely. We use industry-standard encryption and never share your data.' },
+  { q: 'Can I use mock interviews for any role?', a: 'Yes, our platform supports a wide range of job roles and industries.' },
+];
 
 const Home = () => {
   return (
-    <div className="container mt-5">
-      <h1 className="text-center mb-4">Welcome to NextHire 🚀</h1>
-      <p className="lead text-center">Your one-stop platform for ATS-based Resume Analysis, Learning Resources, Mock Tests, and Interview Simulations.</p>
-
-      <div className="row mt-5">
-        <div className="col-md-6">
-          <h3>📄 Resume + JD Analyzer</h3>
-          <p>Upload your resume and job description to see ATS score, matched & missing skills, and recommended improvements.</p>
+    <div className="landing-root">
+      {/* Hero Section */}
+      <section className="section hero-section">
+        <div className="hero-content">
+          <div className="hero-text">
+            <h1 className="hero-title">Your Career, Supercharged <span role="img" aria-label="zap">⚡</span></h1>
+            <p className="hero-subtitle">
+              Conquer job descriptions with intelligent resume matching, personalized mock tests, and interview prep tailored for success.
+            </p>
+            <Button className="cta-btn" onClick={() => window.location.href = '/login'}>Get Started Now</Button>
+          </div>
+          <div className="hero-animation">
+            <div className="parallax-container">
+              <Lottie animationData={animationData} className="lottie-animation" />
+              <div className="parallax-bg" />
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div className="col-md-6">
-          <h3>🎯 Mock Tests & Interview</h3>
-          <p>Test your skills through realistic mock exams and simulated interviews aligned with your job role and skills.</p>
+      {/* Features Section */}
+      <section id="features" className="section features-section bg-light">
+        <h2 className="section-title">Features</h2>
+        <div className="features-grid">
+          {features.map((feat, idx) => (
+            <div className="feature-card" key={idx}>
+              <div className="feature-icon">{feat.icon}</div>
+              <h3 className="feature-title">{feat.title}</h3>
+              <p className="feature-desc">{feat.desc}</p>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      <div className="mt-5 text-center">
-        <h4>Ready to get hired?</h4>
-        <p>Login using your Google account to get started!</p>
-      </div>
+      {/* How It Works Section */}
+      <section id="how-it-works" className="section howitworks-section">
+        <h2 className="section-title">How It Works</h2>
+        <div className="howitworks-steps">
+          {howItWorks.map((step, idx) => (
+            <div className="howitworks-step" key={idx}>
+              <div className="howitworks-stepnum">{step.step}</div>
+              <h4 className="howitworks-title">{step.title}</h4>
+              <p className="howitworks-desc">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="section testimonials-section">
+        <h2 className="section-title">Testimonials</h2>
+        <div className="testimonials-grid">
+          {testimonials.map((t, idx) => (
+            <div className="testimonial-card" key={idx}>
+              <MessageCircle size={32} color="#0d6efd" />
+              <p className="testimonial-quote">"{t.quote}"</p>
+              <div className="testimonial-user">
+                <span className="testimonial-name">{t.name}</span>
+                <span className="testimonial-role">{t.role}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section id="team" className="section team-section bg-light">
+        <h2 className="section-title">Meet the Team</h2>
+        <div className="team-grid">
+          {team.map((member, idx) => (
+            <div className="team-card" key={idx}>
+              <img src={member.img} alt={member.name} className="team-img" />
+              <h4 className="team-name">{member.name}</h4>
+              <span className="team-role">{member.role}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="section faq-section">
+        <h2 className="section-title">Frequently Asked Questions</h2>
+        <div className="faq-list">
+          {faqs.map((faq, idx) => (
+            <details className="faq-item" key={idx}>
+              <summary className="faq-question"><HelpCircle size={20} /> {faq.q}</summary>
+              <div className="faq-answer">{faq.a}</div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="section contact-section bg-light">
+        <h2 className="section-title">Contact Us</h2>
+        <form className="contact-form" onSubmit={e => e.preventDefault()}>
+          <input type="text" className="contact-input" placeholder="Your Name" required />
+          <input type="email" className="contact-input" placeholder="Your Email" required />
+          <textarea className="contact-input" placeholder="Your Message" rows={4} required />
+          <Button className="contact-btn" type="submit">Send Message</Button>
+        </form>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer">
+        &copy; {new Date().getFullYear()} NextHire. All rights reserved.
+      </footer>
     </div>
   );
 };

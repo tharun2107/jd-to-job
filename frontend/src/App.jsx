@@ -40,6 +40,7 @@ import Navbar from './pages/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import ResumeUpload from './pages/ResumeUpload';
+import Profile from './pages/Profile';
 // import other pages as needed
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/resume-upload" element={<ResumeUpload />} />
+        <Route path="/profile" element={<Profile />} />
         {/* Add other routes here */}
       </Routes>
     </>
