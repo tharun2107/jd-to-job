@@ -47,8 +47,8 @@ const ResumeUpload = () => {
         <h2 className="resume-upload-title">Resume + JD Analyzer</h2>
         <form onSubmit={handleSubmit} className="resume-upload-form">
           <div className="mb-3">
-            <label className="form-label">Upload Resume (PDF)</label>
-            <input type="file" className="form-control" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} />
+            <label className="form-label">Upload Resume (PDF, DOCX, TXT)</label>
+            <input type="file" className="form-control" accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain" onChange={(e) => setFile(e.target.files[0])} />
           </div>
           <div className="mb-3">
             <label className="form-label">Job Description</label>

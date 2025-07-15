@@ -50,6 +50,20 @@ const ResultBox = ({ result }) => {
           ))
           : <p className="text-muted">No grouped skills available</p>
         }
+        {/* Feedback and Resume Meta */}
+        {(result.feedback || result.feedback) && (
+          <div className="mt-4">
+            <h6 className="text-info">Feedback</h6>
+            <p>{result.feedback}</p>
+          </div>
+        )}
+        {(result.resumeMeta || result.resume_meta) && (
+          <div className="mt-3">
+            <h6 className="text-secondary">Resume Info</h6>
+            <p><strong>Filename:</strong> {(result.resumeMeta?.filename || result.resume_meta?.filename) ?? 'N/A'}</p>
+            <p><strong>Uploaded At:</strong> {result.resumeMeta?.uploadedAt ? new Date(result.resumeMeta.uploadedAt).toLocaleString() : (result.resume_meta?.uploadedAt ? new Date(result.resume_meta.uploadedAt).toLocaleString() : 'N/A')}</p>
+          </div>
+        )}
       </div>
     </div>
   );
