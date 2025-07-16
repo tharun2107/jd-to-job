@@ -1,0 +1,78 @@
+{
+    "python": [
+      { "title": "W3Schools Python Tutorial", "url": "https://www.w3schools.com/python/", "free": true },
+      { "title": "Python for Everybody - Coursera", "url": "https://www.coursera.org/specializations/python", "free": false }
+    ],
+    "sql": [
+      { "title": "W3Schools SQL Tutorial", "url": "https://www.w3schools.com/sql/", "free": true },
+      { "title": "SQL Tutorial - GeeksforGeeks", "url": "https://www.geeksforgeeks.org/sql-tutorial/", "free": true }
+    ],
+    "machine learning": [
+      { "title": "Google ML Crash Course", "url": "https://developers.google.com/machine-learning/crash-course", "free": true },
+      { "title": "Intro to ML - Kaggle", "url": "https://www.kaggle.com/learn/intro-to-machine-learning", "free": true }
+    ],
+    "data science": [
+      { "title": "IBM Data Science - Coursera", "url": "https://www.coursera.org/professional-certificates/ibm-data-science", "free": false },
+      { "title": "Data Science with Python - GFG", "url": "https://www.geeksforgeeks.org/data-science-with-python/", "free": true }
+    ],
+    "html": [
+      { "title": "W3Schools HTML Tutorial", "url": "https://www.w3schools.com/html/", "free": true },
+      { "title": "HTML Docs - MDN", "url": "https://developer.mozilla.org/en-US/docs/Web/HTML", "free": true }
+    ],
+    "css": [
+      { "title": "W3Schools CSS Tutorial", "url": "https://www.w3schools.com/css/", "free": true },
+      { "title": "CSS Docs - MDN", "url": "https://developer.mozilla.org/en-US/docs/Web/CSS", "free": true }
+    ],
+    "javascript": [
+      { "title": "JavaScript Tutorial - W3Schools", "url": "https://www.w3schools.com/js/", "free": true },
+      { "title": "Eloquent JavaScript (Book)", "url": "https://eloquentjavascript.net/", "free": true }
+    ],
+    "react": [
+      { "title": "React Docs", "url": "https://react.dev/learn", "free": true },
+      { "title": "React Crash Course - YouTube", "url": "https://www.youtube.com/watch?v=w7ejDZ8SWv8", "free": true }
+    ],
+    "node.js": [
+      { "title": "Node.js Docs", "url": "https://nodejs.org/en/docs", "free": true },
+      { "title": "Node.js Tutorial - W3Schools", "url": "https://www.w3schools.com/nodejs/", "free": true }
+    ],
+    "mysql": [
+      { "title": "MySQL Tutorial - W3Schools", "url": "https://www.w3schools.com/mysql/", "free": true },
+      { "title": "MySQL Docs", "url": "https://dev.mysql.com/doc/", "free": true }
+    ],
+    "mongodb": [
+      { "title": "MongoDB Basics - MongoDB University", "url": "https://learn.mongodb.com/paths/introduction", "free": true }
+    ],
+    "flask": [
+      { "title": "Flask Tutorial - Real Python", "url": "https://realpython.com/tutorials/flask/", "free": true },
+      { "title": "Flask Docs", "url": "https://flask.palletsprojects.com/en/2.3.x/", "free": true }
+    ],
+    "git": [
+      { "title": "Git Handbook - GitHub", "url": "https://guides.github.com/introduction/git-handbook/", "free": true },
+      { "title": "Git Tutorial - GFG", "url": "https://www.geeksforgeeks.org/what-is-git/", "free": true }
+    ],
+    "excel": [
+      { "title": "Excel Tutorials - Excel Easy", "url": "https://www.excel-easy.com/", "free": true },
+      { "title": "Microsoft Excel Training", "url": "https://support.microsoft.com/en-us/excel", "free": true }
+    ],
+    "c": [
+      { "title": "C Programming - GFG", "url": "https://www.geeksforgeeks.org/c-programming-language/", "free": true },
+      { "title": "C Tutorial - TutorialsPoint", "url": "https://www.tutorialspoint.com/cprogramming/", "free": true }
+    ],
+    "c++": [
+      { "title": "C++ Tutorial - W3Schools", "url": "https://www.w3schools.com/cpp/", "free": true },
+      { "title": "C++ Basics - GFG", "url": "https://www.geeksforgeeks.org/cpp-tutorial/", "free": true }
+    ],
+    "java": [
+      { "title": "Java Tutorial - W3Schools", "url": "https://www.w3schools.com/java/", "free": true },
+      { "title": "Java Programming - GFG", "url": "https://www.geeksforgeeks.org/java/", "free": true }
+    ],
+    "power bi": [
+      { "title": "Power BI Docs - Microsoft", "url": "https://learn.microsoft.com/en-us/power-bi/", "free": true },
+      { "title": "Power BI Full Course - YouTube", "url": "https://www.youtube.com/watch?v=AGrl-H87pRU", "free": true }
+    ],
+    "communication": [
+      { "title": "Effective Communication - MindTools", "url": "https://www.mindtools.com/CommSkll/CommunicationIntro.htm", "free": true },
+      { "title": "Communication Skills - Coursera", "url": "https://www.coursera.org/learn/wharton-communication-skills", "free": false }
+    ]
+  }
+  

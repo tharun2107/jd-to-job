@@ -19,6 +19,7 @@ const mongoose = require("mongoose");
 
 const authRoutes = require("./routes/auth");
 const analyzeRoutes = require("./routes/analyzeRoute"); // Ensure this route is defined
+const resourcesRoute = require('./routes/resources');
 
 const app = express();
 
@@ -41,6 +42,7 @@ mongoose
 
 app.use("/auth", authRoutes);
 app.use("/api", analyzeRoutes); // Use the analyze route
+app.use('/api/resources', resourcesRoute);
 
 app.get("/", (req, res) => {
   res.send("🚀 Backend Running...");

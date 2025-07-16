@@ -88,13 +88,19 @@ def group_skills(skills_list, skill_to_group):
     """
     Groups skills into predefined categories based on the CSV mapping (skill_to_group).
     Falls back to 'Other' if group is not found.
+    Handles normalized skills that may be lists.
     """
     from app.synonyms import normalize_skill
     result = {}
-
+    # Flatten all normalized skills
+    flat_skills = []
     for skill in skills_list:
-        norm = normalize_skill(skill)
+        normed = normalize_skill(skill)
+        if isinstance(normed, list):
+            flat_skills.extend(normed)
+        else:
+            flat_skills.append(normed)
+    for norm in flat_skills:
         group = skill_to_group.get(norm.lower(), "Other")
         result.setdefault(group, []).append(norm)
-
     return result

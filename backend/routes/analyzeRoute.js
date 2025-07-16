@@ -11,7 +11,7 @@ const upload = multer({ dest: 'uploads/' });
 router.post('/analyze', authMiddleware, upload.single('resume'), analyzeController.analyze);
 
 // Get all JDs for user
-router.get('/jds', authMiddleware, jdController.getUserJDs);
+router.get('/jds', authMiddleware, jdController.getUserJDsWithSkills);
 
 // Get all transactions for a JD
 router.get('/transactions', authMiddleware, transactionController.getTransactionsByJD);

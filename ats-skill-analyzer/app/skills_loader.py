@@ -19,7 +19,11 @@ def load_skills(path="grouped_skills_dataset.csv"):
 
     # Add synonyms too
     skills.update(SYNONYM_MAP.keys())
-    skills.update(SYNONYM_MAP.values())
+    for v in SYNONYM_MAP.values():
+        if isinstance(v, list):
+            skills.update(v)
+        else:
+            skills.add(v)
 
     # Skill to category map
     skill_to_group = dict(zip(df['Skill'], df['Category']))

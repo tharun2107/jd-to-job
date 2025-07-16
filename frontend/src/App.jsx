@@ -42,6 +42,7 @@ import Login from './pages/Login';
 import ResumeUpload from './pages/ResumeUpload';
 import Profile from './pages/Profile';
 import AtsAnalysis from './pages/AtsAnalysis';
+import Resources from './pages/Resources';
 // import other pages as needed
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
         <Route path="/resume-upload" element={<ResumeUpload />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/ats-analysis" element={<AtsAnalysis />} />
+        <Route path="/resources" element={<Resources />} />
         {/* Add other routes here */}
       </Routes>
     </>

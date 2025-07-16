@@ -100,10 +100,19 @@ SYNONYM_MAP = {
     "be": "bachelor of engineering",
     "mtech": "master of technology",
     "bsc": "bachelor of science",
-    "msc": "master of science"
+    "msc": "master of science",
+
+    # Compound Stacks
+    "mern stack": ["mongodb", "express.js", "react.js", "node.js"],
+    "mean stack": ["mongodb", "express.js", "angular.js", "node.js"],
+    "mevn stack": ["mongodb", "express.js", "vue.js", "node.js"],
 }
 
-def normalize_skill(text: str) -> str:
+def normalize_skill(text: str):
+    """
+    Normalize a skill string. If the skill is a compound (e.g., 'mern stack'),
+    return a list of component skills. Otherwise, return a list with the normalized skill.
+    """
     # Break camelCase or glue words
     text = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', text)
     text = text.replace("-", " ").replace("_", " ")
@@ -111,11 +120,16 @@ def normalize_skill(text: str) -> str:
 
     # Try synonym mapping
     if text in SYNONYM_MAP:
-        return SYNONYM_MAP[text]
+        mapped = SYNONYM_MAP[text]
+        if isinstance(mapped, list):
+            return mapped
+        return [mapped]
 
     # Try partial match in map (e.g., "worked on NLP system" → "natural language processing")
     for key in SYNONYM_MAP:
         if key in text:
-            return SYNONYM_MAP[key]
-    
-    return text
+            mapped = SYNONYM_MAP[key]
+            if isinstance(mapped, list):
+                return mapped
+            return [mapped]
+    return [text]

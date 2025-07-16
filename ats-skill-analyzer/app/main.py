@@ -1,11 +1,13 @@
 from flask import Flask, request, jsonify
 import fitz  # PyMuPDF
+import os
 from app.skills_loader import load_skills
 from app.extractor import SkillExtractor
 from app.matcher import match_skills
 from app.role_expectations import infer_expected_skills, group_skills
+from app import create_app
 
-app = Flask(__name__)
+app = create_app()
 
 # Load skills list and skill-to-group mapping
 skills_list, skill_to_group = load_skills()
@@ -17,6 +19,15 @@ def extract_text_from_pdf(pdf_bytes):
     for page in doc:
         text += page.get_text()
     return text
+
+def flatten_skills(skills):
+    flat = []
+    for s in skills:
+        if isinstance(s, list):
+            flat.extend(s)
+        else:
+            flat.append(s)
+    return flat
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -48,15 +59,30 @@ def analyze():
 
     # 🔥 Extract section-wise skills
     resume_section_skills = extractor.extract_section_wise(resume_text)
+    print("Resume section skills:", resume_section_skills)
 
     # Extract skills from JD
     jd_skills_extracted = extractor.extract(jd_text)
     inferred_skills = infer_expected_skills(job_role)
-    jd_skills = inferred_skills if not jd_skills_extracted and inferred_skills else jd_skills_extracted
+    # --- Fix: If JD text is a job title, use it to infer skills if nothing else found ---
+    fallback_inferred_skills = infer_expected_skills(jd_text.strip().lower()) if not jd_skills_extracted and not inferred_skills else []
+    if jd_skills_extracted:
+        jd_skills = jd_skills_extracted
+        print(f"[DEBUG] Using extracted JD skills: {jd_skills}")
+    elif inferred_skills:
+        jd_skills = inferred_skills
+        print(f"[DEBUG] Using inferred skills from job_role: {jd_skills}")
+    elif fallback_inferred_skills:
+        jd_skills = fallback_inferred_skills
+        print(f"[DEBUG] Using inferred skills from JD text as job title: {jd_skills}")
+    else:
+        jd_skills = []
+        print(f"[DEBUG] No JD skills found.")
 
-    matched, missing, score = match_skills(jd_skills, resume_section_skills)
+    matched, missing, score, exp_info = match_skills(jd_skills, resume_section_skills, jd_text=jd_text, resume_text=resume_text)
 
-    def group(skills): return group_skills(skills, skill_to_group)
+    def group(skills):
+        return group_skills(flatten_skills(skills), skill_to_group)
 
     return jsonify({
         "jd_skills": jd_skills,
@@ -68,7 +94,13 @@ def analyze():
         "grouped_resume_skills": {
             section: group(skills) for section, skills in resume_section_skills.items()
         },
-        "grouped_missing_skills": group(missing)
+        "grouped_missing_skills": group(missing),
+        "experience_info": exp_info,
+        # --- New fields for category-wise breakdown ---
+        "section_scores": exp_info.get("section_scores", {}),
+        "section_bonuses": exp_info.get("section_bonuses", {}),
+        "section_penalties": exp_info.get("section_penalties", {}),
+        "missing_sections": exp_info.get("missing_sections", []),
     })
 
 if __name__ == '__main__':
