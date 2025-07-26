@@ -4,7 +4,22 @@ const axios = require('axios');
 
 // Gemini API configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+//
+// --- THE FIX ---
+// Use a model name that is confirmed to be in your list of available models.
+//
+const GEMINI_MODEL = 'gemini-1.5-flash'; 
+
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent`;
+
+// Check if Gemini API key is configured
+if (!GEMINI_API_KEY) {
+  console.error('❌ FATAL: GEMINI_API_KEY environment variable is not set!');
+  console.error('Please add GEMINI_API_KEY=your_api_key_here to your .env file and restart the server.');
+} else {
+  console.log(`✅ GEMINI_API_KEY loaded successfully.`);
+}
 
 // Time limits for different question counts
 const TIME_LIMITS = {
@@ -14,101 +29,107 @@ const TIME_LIMITS = {
 };
 
 // Generate questions using Gemini API
-const generateQuestions = async (skills, experienceLevel, numberOfQuestions) => {
-  try {
-    const prompt = `Create ${numberOfQuestions} multiple choice questions (MCQs) for a technical interview based on these skills: ${skills.join(', ')}. 
-    
-    Experience Level: ${experienceLevel}
-    
-    Requirements:
-    1. Each question should have exactly 4 options (A, B, C, D)
-    2. Questions should be appropriate for ${experienceLevel} level
-    3. Mix of difficulty levels based on experience
-    4. Focus on practical knowledge and real-world scenarios
-    5. Return in this exact JSON format:
-    {
-      "questions": [
-        {
-          "question": "Question text here?",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correctAnswer": 0,
-          "skill": "skill_name"
-        }
-      ]
-    }
-    
-    Note: correctAnswer should be the index (0-3) of the correct option.`;
+const generateQuestions = async (jdText, skills, numberOfQuestions) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key is not configured. Please check server logs.');
+  }
 
+  try {
+    console.log(`--- Initiating Question Generation ---`);
+    console.log(`✅ Using Model: ${GEMINI_MODEL}`); // This will now show the correct, available model
+    console.log(`Target URL: ${GEMINI_API_URL}`);
+
+    const prompt = `You are an expert technical interviewer. Based on the following Job Description (JD), create ${numberOfQuestions} multiple choice questions (MCQs) for a mock exam. Each question should:
+- Be relevant to the JD and the listed skills: ${skills.join(', ')}
+- Have exactly 4 options (A, B, C, D)
+- Vary in difficulty as appropriate for the JD
+- Focus on practical, real-world scenarios
+- Cover a range of topics from the JD
+
+Job Description:
+"""
+${jdText}
+"""
+
+Return the result in this exact JSON format:
+{
+  "questions": [
+    {
+      "question": "Question text here?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": 0,
+      "skill": "skill_name"
+    }
+  ]
+}
+Note: correctAnswer should be the index (0-3) of the correct option.`;
+
+    console.log('🚀 Making request to Gemini API...');
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
+      contents: [{ parts: [{ text: prompt }] }]
     });
 
+    console.log('✅ Gemini API response received');
     const generatedText = response.data.candidates[0].content.parts[0].text;
     
-    // Extract JSON from the response
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format from Gemini API');
-    }
-
-    const questionsData = JSON.parse(jsonMatch[0]);
+    // Clean potential markdown formatting from the response
+    const cleanedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const questionsData = JSON.parse(cleanedText);
+    
+    console.log('✅ Parsed questions data successfully.');
     return questionsData.questions;
   } catch (error) {
-    console.error('Error generating questions:', error);
-    throw new Error('Failed to generate questions');
+    console.error('❌ Error generating questions:', error.message);
+    if (error.response) {
+      console.error('🔍 API Response Status:', error.response.status);
+      console.error('🔍 API Response Data:', JSON.stringify(error.response.data, null, 2));
+    }
+    throw new Error(`Failed to generate questions: ${error.message}`);
   }
 };
 
-// Evaluate answers using Gemini API
+// Evaluate answers using Gemini API (with explanation and suggestion)
 const evaluateAnswers = async (questions, userAnswers) => {
   try {
-    const prompt = `Evaluate these user answers for a technical interview. Provide detailed feedback for each question.
+    const prompt = `Evaluate the following user answers for a technical mock exam. For each question, provide:
+- Whether the answer is correct
+- The correct answer
+- A detailed explanation
+- If the user was wrong, a suggestion to improve on the specific topic/skill
 
-    Questions and User Answers:
-    ${questions.map((q, index) => `
-    Question ${index + 1}: ${q.question}
-    Options: ${q.options.map((opt, i) => `${i}: ${opt}`).join(', ')}
-    Correct Answer: ${q.options[q.correctAnswer]}
-    User's Answer: ${q.options[userAnswers[index]?.selectedOption || 0]}
-    Skill: ${q.skill}
-    `).join('\n')}
+Questions and User Answers:
+${questions.map((q, index) => `
+Question ${index + 1}: ${q.question}
+Options: ${q.options.map((opt, i) => `${i}: ${opt}`).join(', ')}
+Correct Answer: ${q.options[q.correctAnswer]}
+User's Answer: ${q.options[userAnswers[index]?.selectedOption || 0]}
+Skill: ${q.skill}
+`).join('\n')}
 
-    Provide evaluation in this exact JSON format:
+Return the evaluation in this exact JSON format:
+{
+  "totalScore": 15,
+  "percentage": 75.0,
+  "feedback": [
     {
-      "totalScore": 15,
-      "percentage": 75.0,
-      "feedback": [
-        {
-          "questionIndex": 0,
-          "correctAnswer": "Correct answer text",
-          "explanation": "Detailed explanation why this is correct",
-          "skillFocus": "Specific skill area to focus on"
-        }
-      ],
-      "overallFeedback": "Overall performance feedback",
-      "areasToImprove": ["Area 1", "Area 2", "Area 3"]
-    }`;
+      "questionIndex": 0,
+      "isCorrect": true,
+      "correctAnswer": "Correct answer text",
+      "explanation": "Detailed explanation why this is correct",
+      "suggestion": "Suggestion to improve if wrong, else empty string",
+      "skillFocus": "Specific skill area to focus on"
+    }
+  ],
+  "overallFeedback": "Overall performance feedback",
+  "areasToImprove": ["Area 1", "Area 2", "Area 3"]
+}`;
 
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
+      contents: [{ parts: [{ text: prompt }] }]
     });
-
     const generatedText = response.data.candidates[0].content.parts[0].text;
-    
-    // Extract JSON from the response
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format from Gemini API');
-    }
-
+    if (!jsonMatch) throw new Error('Invalid response format from Gemini API');
     const evaluationData = JSON.parse(jsonMatch[0]);
     return evaluationData;
   } catch (error) {
@@ -117,19 +138,14 @@ const evaluateAnswers = async (questions, userAnswers) => {
   }
 };
 
-// Create new mock test
+// Create new mock test (no experienceLevel)
 exports.createMockTest = async (req, res) => {
   try {
-    const { jdId, numberOfQuestions, experienceLevel } = req.body;
+    const { jdId, numberOfQuestions } = req.body;
     const userId = req.user.id;
 
-    // Validate input
     if (![15, 20, 30].includes(numberOfQuestions)) {
       return res.status(400).json({ error: 'Invalid number of questions' });
-    }
-
-    if (!['fresher', '2-4 years', '5+ years'].includes(experienceLevel)) {
-      return res.status(400).json({ error: 'Invalid experience level' });
     }
 
     // Get JD and skills
@@ -137,19 +153,15 @@ exports.createMockTest = async (req, res) => {
     if (!jd) {
       return res.status(404).json({ error: 'JD not found' });
     }
-
-    // Get skills from the latest transaction
     const Transaction = require('../models/Transaction');
     const latestTransaction = await Transaction.findOne({ jdId }).sort({ createdAt: -1 });
-    
     if (!latestTransaction || !latestTransaction.ats || !latestTransaction.ats.jdSkills) {
       return res.status(400).json({ error: 'No skills found for this JD' });
     }
-
     const skills = latestTransaction.ats.jdSkills;
 
-    // Generate questions using Gemini
-    const questions = await generateQuestions(skills, experienceLevel, numberOfQuestions);
+    // Generate questions using Gemini (now uses full JD text)
+    const questions = await generateQuestions(jd.jdText, skills, numberOfQuestions);
 
     // Create mock test
     const mockTest = new MockTest({
@@ -157,16 +169,13 @@ exports.createMockTest = async (req, res) => {
       jdId,
       examConfig: {
         numberOfQuestions,
-        experienceLevel,
         timeLimit: TIME_LIMITS[numberOfQuestions]
       },
       questions,
       examStatus: 'in-progress',
       startTime: new Date()
     });
-
     await mockTest.save();
-
     res.json({
       success: true,
       mockTest: {
@@ -180,7 +189,6 @@ exports.createMockTest = async (req, res) => {
         startTime: mockTest.startTime
       }
     });
-
   } catch (error) {
     console.error('Error creating mock test:', error);
     res.status(500).json({ error: 'Failed to create mock test' });

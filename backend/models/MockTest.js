@@ -19,8 +19,8 @@ const mockTestSchema = new mongoose.Schema({
     },
     experienceLevel: {
       type: String,
-      required: true,
-      enum: ['fresher', '2-4 years', '5+ years']
+      enum: ['fresher', '2-4 years', '5+ years'],
+      default: 'fresher' // Make it optional with default
     },
     timeLimit: {
       type: Number, // in minutes
@@ -62,15 +62,19 @@ const mockTestSchema = new mongoose.Schema({
   evaluation: {
     totalScore: {
       type: Number,
-      required: true
+      required: false // Only required when exam is completed
     },
     percentage: {
       type: Number,
-      required: true
+      required: false // Only required when exam is completed
     },
     feedback: [{
       questionIndex: {
         type: Number,
+        required: true
+      },
+      isCorrect: {
+        type: Boolean,
         required: true
       },
       correctAnswer: {
@@ -81,6 +85,10 @@ const mockTestSchema = new mongoose.Schema({
         type: String,
         required: true
       },
+      suggestion: {
+        type: String,
+        required: true
+      },
       skillFocus: {
         type: String,
         required: true
@@ -88,7 +96,7 @@ const mockTestSchema = new mongoose.Schema({
     }],
     overallFeedback: {
       type: String,
-      required: true
+      required: false // Only required when exam is completed
     },
     areasToImprove: [{
       type: String
