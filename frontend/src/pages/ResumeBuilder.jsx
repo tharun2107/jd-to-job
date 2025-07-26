@@ -234,8 +234,9 @@ function App() {
         margin: 0,
         filename: `${resume.personalInfo.name || "resume"}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
+          html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       }).save();
     } else {
       alert("Preview not found!");
@@ -340,7 +341,7 @@ function App() {
             }
           }
         `}</style>
-        <div ref={previewRef} className="resume-preview-mobile" style={{ width: '210mm', minHeight: '297mm', maxWidth: '210mm', boxShadow: '0 1px 8px #e0e7ff', margin: '0 auto', position: 'relative', background: '#fff', padding: '2.5rem 2.5rem', boxSizing: 'border-box', overflow: 'visible' }}>
+              <div ref={previewRef} className="resume-preview-mobile" style={{ width: '210mm', maxWidth: '210mm', boxShadow: '0 1px 8px #e0e7ff', margin: '0 auto', position: 'relative', background: '#fff', padding: '2.5rem 2.5rem', boxSizing: 'border-box', overflow: 'visible' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.2rem' }}>
             <h1 className="resume-header-mobile" style={{ fontSize: '1.5rem', color: '#111', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 0.2em 0', textAlign: 'center' }}>{resume.personalInfo.name || 'Your Name'}</h1>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', margin: '0 0 0.1em 0', gap: '0.1em', color: '#222' }}>
@@ -520,7 +521,6 @@ function App() {
               </ul>
             </div>
           ))}
-          <div style={{ position: 'absolute', left: 0, right: 0, top: '297mm', height: 0, borderTop: '1.5px dashed #bbb', opacity: 0.5, pointerEvents: 'none', zIndex: 10, width: '100%' }} className="page-break-indicator" />
         </div>
       </div>
     </div>
