@@ -20,6 +20,14 @@ const MockTest = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [examStarted, setExamStarted] = useState(false);
 
+  // Assessment history states
+  const [attempts, setAttempts] = useState([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
+  const [attemptsError, setAttemptsError] = useState(null);
+  const [selectedAttempt, setSelectedAttempt] = useState(null);
+  const [attemptDetails, setAttemptDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   // Time limits for different question counts
   const TIME_LIMITS = {
     15: 20, // 20 minutes for 15 questions
@@ -52,6 +60,14 @@ const MockTest = () => {
     return () => clearInterval(timer);
   }, [examStarted, timeLeft]);
 
+  // Fetch attempts when entering history view
+  useEffect(() => {
+    if (currentView === 'history') {
+      fetchAttempts();
+    }
+    // eslint-disable-next-line
+  }, [currentView]);
+
   const fetchJDs = async () => {
     setLoadingJds(true);
     setJdError(null);
@@ -70,6 +86,40 @@ const MockTest = () => {
       setJdError('Failed to load job descriptions. Please login again.');
     } finally {
       setLoadingJds(false);
+    }
+  };
+
+  const fetchAttempts = async () => {
+    setLoadingAttempts(true);
+    setAttemptsError(null);
+    setAttempts([]);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5001/api/mocktest/attempts', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAttempts(Array.isArray(response.data.attempts) ? response.data.attempts : []);
+    } catch (error) {
+      setAttemptsError('Failed to load assessment attempts. Please login again.');
+    } finally {
+      setLoadingAttempts(false);
+    }
+  };
+
+  const fetchAttemptDetails = async (attemptId) => {
+    setLoadingDetails(true);
+    setAttemptDetails(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5001/api/mocktest/result/${attemptId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAttemptDetails(response.data.mockTest);
+    } catch (error) {
+      setAttemptDetails(null);
+      alert('Failed to load attempt details.');
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -1016,37 +1066,263 @@ const MockTest = () => {
               }}>
                 View your previous assessment attempts and results.
               </p>
-              <div style={{
-                background: '#f8fafc',
-                border: '2px dashed #cbd5e1',
-                borderRadius: 12,
-                padding: 60,
-                margin: '0 auto',
-                maxWidth: 400
-              }}>
+              {loadingAttempts ? (
+                <div style={{ color: '#667eea', fontWeight: 600, fontSize: 18, margin: '40px 0' }}>Loading attempts...</div>
+              ) : attemptsError ? (
+                <div style={{ color: '#dc2626', fontWeight: 600, fontSize: 16, margin: '40px 0' }}>{attemptsError}</div>
+              ) : attempts.length === 0 ? (
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: 12,
+                      padding: 60,
+                      margin: '0 auto',
+                      maxWidth: 400
+                    }}>
+                      <div style={{
+                        fontSize: 48,
+                        color: '#cbd5e1',
+                        marginBottom: 16
+                      }}>
+                        📊
+                      </div>
+                      <p style={{
+                        color: '#64748b',
+                        fontSize: 16,
+                        margin: 0,
+                        fontWeight: 500
+                      }}>
+                        No assessment attempts found
+                      </p>
+                      <p style={{
+                        color: '#94a3b8',
+                        fontSize: 14,
+                        margin: '8px 0 0 0'
+                      }}>
+                        Complete your first assessment to see results here
+                      </p>
+                    </div>
+              ) : (
                 <div style={{
-                  fontSize: 48,
-                  color: '#cbd5e1',
-                  marginBottom: 16
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                  gap: 24,
+                  margin: '0 auto',
+                  maxWidth: 900
                 }}>
-                  📊
+                  {attempts.map(attempt => (
+                    <div
+                      key={attempt.id}
+                      onClick={() => {
+                        setSelectedAttempt(attempt.id);
+                        fetchAttemptDetails(attempt.id);
+                      }}
+                      style={{
+                        background: '#f8fafc',
+                        border: '2px solid #e2e8f0',
+                        borderRadius: 14,
+                        padding: 28,
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(16,24,40,0.06)',
+                        transition: 'box-shadow 0.2s',
+                        textAlign: 'left',
+                        position: 'relative',
+                        minHeight: 180
+                      }}
+                    >
+                      <div style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: '#1e293b',
+                        marginBottom: 8
+                      }}>{attempt.jdText?.slice(0, 60)}...</div>
+                      <div style={{ color: '#64748b', fontSize: 14, marginBottom: 8 }}>
+                        {new Date(attempt.startTime).toLocaleString()}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ color: '#10b981', fontWeight: 700, fontSize: 16 }}>
+                          {attempt.evaluation?.percentage != null ? `${attempt.evaluation.percentage}%` : '--'}
+                        </span>
+                        <span style={{ color: '#64748b', fontSize: 14 }}>
+                          Score: {attempt.evaluation?.totalScore ?? '--'}
+                        </span>
+                        <span style={{
+                          color: attempt.examStatus === 'completed' ? '#10b981' : attempt.examStatus === 'timeout' ? '#ef4444' : '#f59e0b',
+                          fontWeight: 600,
+                          fontSize: 14
+                        }}>
+                          {attempt.examStatus.charAt(0).toUpperCase() + attempt.examStatus.slice(1)}
+                        </span>
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: 14 }}>
+                        Time Taken: {attempt.timeTaken != null ? `${attempt.timeTaken} min` : '--'}
+                      </div>
+                      <div style={{
+                        position: 'absolute',
+                        top: 18,
+                        right: 18,
+                        background: '#667eea',
+                        color: 'white',
+                        borderRadius: 8,
+                        padding: '4px 12px',
+                        fontSize: 13,
+                        fontWeight: 600
+                      }}>
+                        View Details
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p style={{
-                  color: '#64748b',
-                  fontSize: 16,
-                  margin: 0,
-                  fontWeight: 500
+              )}
+
+              {/* Attempt Details Modal */}
+              {selectedAttempt && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100vw',
+                  height: '100vh',
+                  background: 'rgba(30,41,59,0.45)',
+                  zIndex: 1000,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  No assessment attempts found
-                </p>
-                <p style={{
-                  color: '#94a3b8',
-                  fontSize: 14,
-                  margin: '8px 0 0 0'
-                }}>
-                  Complete your first assessment to see results here
-                </p>
-              </div>
+                  <div style={{
+                    background: 'white',
+                    borderRadius: 16,
+                    maxWidth: 700,
+                    width: '95vw',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    boxShadow: '0 8px 32px rgba(16,24,40,0.18)',
+                    padding: 36,
+                    position: 'relative'
+                  }}>
+                    <button
+                      onClick={() => {
+                        setSelectedAttempt(null);
+                        setAttemptDetails(null);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 18,
+                        right: 18,
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '6px 16px',
+                        fontWeight: 700,
+                        fontSize: 15,
+                        cursor: 'pointer',
+                        zIndex: 10
+                      }}
+                    >
+                      Close
+                    </button>
+                    {loadingDetails || !attemptDetails ? (
+                      <div style={{ color: '#667eea', fontWeight: 600, fontSize: 18, margin: '40px 0' }}>Loading details...</div>
+                    ) : (
+                      <div>
+                        <h2 style={{ color: '#1e293b', fontWeight: 800, fontSize: 24, marginBottom: 8 }}>
+                          {attemptDetails.jdText?.slice(0, 80)}...
+                        </h2>
+                        <div style={{ color: '#64748b', fontSize: 15, marginBottom: 12 }}>
+                          Attempted on: {new Date(attemptDetails.startTime).toLocaleString()}
+                        </div>
+                        <div style={{ display: 'flex', gap: 24, marginBottom: 18 }}>
+                          <span style={{ color: '#10b981', fontWeight: 700, fontSize: 18 }}>
+                            {attemptDetails.evaluation?.percentage != null ? `${attemptDetails.evaluation.percentage}%` : '--'}
+                          </span>
+                          <span style={{ color: '#64748b', fontSize: 15 }}>
+                            Score: {attemptDetails.evaluation?.totalScore ?? '--'}
+                          </span>
+                          <span style={{ color: '#64748b', fontSize: 15 }}>
+                            Time Taken: {attemptDetails.timeTaken != null ? `${attemptDetails.timeTaken} min` : '--'}
+                          </span>
+                          <span style={{
+                            color: attemptDetails.examStatus === 'completed' ? '#10b981' : attemptDetails.examStatus === 'timeout' ? '#ef4444' : '#f59e0b',
+                            fontWeight: 600,
+                            fontSize: 15
+                          }}>
+                            {attemptDetails.examStatus.charAt(0).toUpperCase() + attemptDetails.examStatus.slice(1)}
+                          </span>
+                        </div>
+                        <div style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 10,
+                          padding: 18,
+                          marginBottom: 18
+                        }}>
+                          <div style={{ color: '#1e293b', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Overall Feedback</div>
+                          <div style={{ color: '#64748b', fontSize: 15 }}>{attemptDetails.evaluation?.overallFeedback ?? 'No feedback.'}</div>
+                        </div>
+                        <div style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 10,
+                          padding: 18,
+                          marginBottom: 18
+                        }}>
+                          <div style={{ color: '#1e293b', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Areas to Improve</div>
+                          <div style={{ color: '#64748b', fontSize: 15 }}>
+                            {Array.isArray(attemptDetails.evaluation?.areasToImprove) && attemptDetails.evaluation.areasToImprove.length > 0
+                              ? attemptDetails.evaluation.areasToImprove.join(', ')
+                              : 'No specific areas.'}
+                          </div>
+                        </div>
+                        <div style={{ color: '#1e293b', fontWeight: 700, fontSize: 18, margin: '18px 0 10px 0' }}>Question-wise Feedback</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                          {Array.isArray(attemptDetails.evaluation?.feedback) && attemptDetails.evaluation.feedback.length > 0 ? (
+                            attemptDetails.evaluation.feedback.map((fb, idx) => (
+                              <div key={idx} style={{
+                                background: fb.isCorrect ? '#e0f7fa' : '#fef2f2',
+                                border: `2px solid ${fb.isCorrect ? '#10b981' : '#ef4444'}`,
+                                borderRadius: 10,
+                                padding: 18
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                  <span style={{
+                                    background: fb.isCorrect ? '#10b981' : '#ef4444',
+                                    color: 'white',
+                                    borderRadius: 6,
+                                    padding: '2px 10px',
+                                    fontWeight: 700,
+                                    fontSize: 14
+                                  }}>{fb.isCorrect ? 'Correct' : 'Wrong'}</span>
+                                  <span style={{ color: '#1e293b', fontWeight: 600, fontSize: 15 }}>
+                                    Q{fb.questionIndex + 1} - {fb.skillFocus}
+                                  </span>
+                                </div>
+                                <div style={{ color: '#1e293b', fontWeight: 600, fontSize: 15, marginBottom: 6 }}>
+                                  {attemptDetails.questions[fb.questionIndex]?.question}
+                                </div>
+                                <div style={{ color: '#64748b', fontSize: 15, marginBottom: 6 }}>
+                                  <b>Your Answer:</b> {attemptDetails.questions[fb.questionIndex]?.options?.[attemptDetails.userAnswers?.[fb.questionIndex]?.selectedOption] ?? 'N/A'}
+                                </div>
+                                <div style={{ color: '#64748b', fontSize: 15, marginBottom: 6 }}>
+                                  <b>Correct Answer:</b> {fb.correctAnswer}
+                                </div>
+                                <div style={{ color: '#64748b', fontSize: 15, marginBottom: 6 }}>
+                                  <b>Explanation:</b> {fb.explanation}
+                                </div>
+                                <div style={{ color: '#64748b', fontSize: 15 }}>
+                                  <b>Suggestion:</b> {fb.suggestion}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ color: '#64748b', fontSize: 15 }}>No feedback available.</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

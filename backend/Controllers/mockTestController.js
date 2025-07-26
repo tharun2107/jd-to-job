@@ -223,7 +223,17 @@ exports.submitMockTest = async (req, res) => {
     }));
 
     // Evaluate answers using Gemini
-    const evaluation = await evaluateAnswers(mockTest.questions, userAnswers);
+    let evaluation = await evaluateAnswers(mockTest.questions, userAnswers);
+
+    // Ensure every feedback item has a non-empty suggestion
+    if (evaluation && Array.isArray(evaluation.feedback)) {
+      evaluation.feedback = evaluation.feedback.map(fb => ({
+        ...fb,
+        suggestion: typeof fb.suggestion === 'string' && fb.suggestion.trim() !== ''
+          ? fb.suggestion
+          : 'No suggestion provided.'
+      }));
+    }
 
     // Update mock test
     mockTest.userAnswers = userAnswers;

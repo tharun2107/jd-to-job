@@ -87,7 +87,8 @@ const mockTestSchema = new mongoose.Schema({
       },
       suggestion: {
         type: String,
-        required: true
+        required: true,
+        default: '' // Allow empty string
       },
       skillFocus: {
         type: String,
