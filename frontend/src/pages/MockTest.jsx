@@ -13,6 +13,13 @@ const MockTest = () => {
   const [loadingExam, setLoadingExam] = useState(false);
   const [examError, setExamError] = useState(null);
 
+  // Exam states
+  const [currentExam, setCurrentExam] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [examStarted, setExamStarted] = useState(false);
+
   // Time limits for different question counts
   const TIME_LIMITS = {
     15: 20, // 20 minutes for 15 questions
@@ -26,6 +33,24 @@ const MockTest = () => {
     }
     // eslint-disable-next-line
   }, [currentView]);
+
+  // Timer effect for exam
+  useEffect(() => {
+    let timer;
+    if (examStarted && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            // Time's up - auto submit
+            handleSubmitExam();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [examStarted, timeLeft]);
 
   const fetchJDs = async () => {
     setLoadingJds(true);
@@ -72,10 +97,14 @@ const MockTest = () => {
 
       console.log('Exam created:', response.data);
 
-      // For now, just show success and go back to main
-      // Later we'll implement the actual exam interface
-      alert(`Assessment created successfully! ${questionCount} questions, ${TIME_LIMITS[questionCount]} minutes.`);
-      setCurrentView('main');
+      // Set up the exam
+      const examData = response.data.mockTest;
+      setCurrentExam(examData);
+      setUserAnswers(new Array(examData.questions.length).fill(null));
+      setTimeLeft(TIME_LIMITS[questionCount] * 60); // Convert to seconds
+      setCurrentQuestionIndex(0);
+      setExamStarted(true);
+      setCurrentView('exam');
 
     } catch (error) {
       console.error('Error creating exam:', error);
@@ -83,6 +112,55 @@ const MockTest = () => {
     } finally {
       setLoadingExam(false);
     }
+  };
+
+  const handleAnswerSelect = (selectedOption) => {
+    const newAnswers = [...userAnswers];
+    newAnswers[currentQuestionIndex] = selectedOption;
+    setUserAnswers(newAnswers);
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < currentExam.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleSubmitExam = async () => {
+    if (!currentExam) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post('http://localhost:5001/api/mocktest/submit', {
+        mockTestId: currentExam.id,
+        answers: userAnswers.map((answer, index) => ({
+          questionIndex: index,
+          selectedOption: answer || 0
+        }))
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log('Exam submitted:', response.data);
+      setCurrentView('results');
+      // You can store the results in state if needed
+
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      alert('Failed to submit exam. Please try again.');
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   console.log('Render - JDs:', jds, 'Selected JD:', selectedJd);
@@ -362,17 +440,17 @@ const MockTest = () => {
                       <p style={{ margin: 0, fontSize: 14, opacity: 0.8 }}>
                         Upload a job description first to get started with assessments.
                       </p>
-                      </div>
-                    ) : (
-                        <div>
-                          <select
-                            value={selectedJd ? selectedJd._id : ''}
-                            onChange={e => {
-                              const jd = jds.find(j => j._id === e.target.value);
-                              setSelectedJd(jd);
-                            }}
-                            style={{
-                              width: '100%',
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        value={selectedJd ? selectedJd._id : ''}
+                        onChange={e => {
+                          const jd = jds.find(j => j._id === e.target.value);
+                          setSelectedJd(jd);
+                        }}
+                        style={{
+                          width: '100%',
                         padding: '16px 20px',
                         borderRadius: 8,
                         border: '2px solid #d1d5db',
@@ -702,6 +780,222 @@ const MockTest = () => {
                   )}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Exam View */}
+          {currentView === 'exam' && currentExam && (
+            <div>
+              {/* Exam Header */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: 20,
+                marginBottom: 24,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <h2 style={{
+                    color: '#1e293b',
+                    fontSize: 24,
+                    fontWeight: 700,
+                    margin: 0
+                  }}>
+                    Question {currentQuestionIndex + 1} of {currentExam.questions.length}
+                  </h2>
+                  <p style={{
+                    color: '#64748b',
+                    fontSize: 14,
+                    margin: '4px 0 0 0'
+                  }}>
+                    Skill: {currentExam.questions[currentQuestionIndex]?.skill}
+                  </p>
+                </div>
+                <div style={{
+                  background: timeLeft < 300 ? '#ef4444' : '#10b981',
+                  color: 'white',
+                  padding: '12px 20px',
+                  borderRadius: 8,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  minWidth: 80,
+                  textAlign: 'center'
+                }}>
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+
+              {/* Question */}
+              <div style={{
+                background: 'white',
+                border: '2px solid #e2e8f0',
+                borderRadius: 12,
+                padding: 32,
+                marginBottom: 24
+              }}>
+                <h3 style={{
+                  color: '#1e293b',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  marginBottom: 24,
+                  lineHeight: 1.6
+                }}>
+                  {currentExam.questions[currentQuestionIndex]?.question}
+                </h3>
+
+                {/* Options */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {currentExam.questions[currentQuestionIndex]?.options.map((option, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswerSelect(index)}
+                      style={{
+                        background: userAnswers[currentQuestionIndex] === index ? '#667eea' : '#f8fafc',
+                        color: userAnswers[currentQuestionIndex] === index ? 'white' : '#374151',
+                        border: `2px solid ${userAnswers[currentQuestionIndex] === index ? '#667eea' : '#e2e8f0'}`,
+                        borderRadius: 8,
+                        padding: '16px 20px',
+                        fontSize: 16,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        fontWeight: userAnswers[currentQuestionIndex] === index ? 600 : 400
+                      }}
+                    >
+                      <span style={{ marginRight: 12, fontWeight: 700 }}>
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 24
+              }}>
+                <button
+                  onClick={handlePreviousQuestion}
+                  disabled={currentQuestionIndex === 0}
+                  style={{
+                    background: currentQuestionIndex === 0 ? '#d1d5db' : '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: 8,
+                    cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer',
+                    fontSize: 16,
+                    fontWeight: 600
+                  }}
+                >
+                  Previous
+                </button>
+
+                <div style={{
+                  display: 'flex',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  justifyContent: 'center'
+                }}>
+                  {currentExam.questions.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentQuestionIndex(index)}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        background: index === currentQuestionIndex ? '#667eea' :
+                          userAnswers[index] !== null ? '#10b981' : '#e2e8f0',
+                        color: index === currentQuestionIndex ? 'white' : '#374151',
+                        border: 'none',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: 600
+                      }}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+
+                {currentQuestionIndex === currentExam.questions.length - 1 ? (
+                  <button
+                    onClick={handleSubmitExam}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      fontWeight: 700
+                    }}
+                  >
+                    Submit Exam
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNextQuestion}
+                    style={{
+                      background: '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      fontWeight: 600
+                    }}
+                  >
+                    Next
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Results View */}
+          {currentView === 'results' && (
+            <div style={{ textAlign: 'center' }}>
+              <h2 style={{
+                color: '#1e293b',
+                fontSize: 28,
+                fontWeight: 700,
+                marginBottom: 16
+              }}>
+                Assessment Completed!
+              </h2>
+              <p style={{
+                color: '#64748b',
+                fontSize: 16,
+                marginBottom: 40
+              }}>
+                Your assessment has been submitted successfully.
+              </p>
+              <button
+                onClick={() => setCurrentView('main')}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '16px 32px',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 700
+                }}
+              >
+                Take Another Assessment
+              </button>
             </div>
           )}
 
