@@ -32,6 +32,7 @@ const Navbar = () => {
           <li><Link to="/resume-upload" onClick={handleLinkClick}>ATS Analyzer</Link></li>
           <li><Link to="/resources" onClick={handleLinkClick}>Resources</Link></li>
           <li><Link to="/mock-test" onClick={handleLinkClick}>Mock Test</Link></li>
+          <li><Link to="/resume-builder" onClick={handleLinkClick}>Resume Builder</Link></li>
           <li><Link to="/mock-interview" onClick={handleLinkClick}>Mock Interview</Link></li>
           <li><Link to="/dashboard" onClick={handleLinkClick}>Dashboard</Link></li>
           {token && (

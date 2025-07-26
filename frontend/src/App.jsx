@@ -43,6 +43,7 @@ import ResumeUpload from './pages/ResumeUpload';
 import Profile from './pages/Profile';
 import AtsAnalysis from './pages/AtsAnalysis';
 import Resources from './pages/Resources';
+import ResumeBuilder from './pages/ResumeBuilder';
 // import other pages as needed
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/ats-analysis" element={<AtsAnalysis />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/resume-builder" element={<ResumeBuilder />} />
         {/* Add other routes here */}
       </Routes>
     </>
