@@ -1,16 +1,116 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-const QuestionSchema = new mongoose.Schema({
-  questionText: String,
-  options: [String],
-  correctAnswer: String,
-  explanation: String
+const mockTestSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  jdId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JD',
+    required: true
+  },
+  examConfig: {
+    numberOfQuestions: {
+      type: Number,
+      required: true,
+      enum: [15, 20, 30]
+    },
+    experienceLevel: {
+      type: String,
+      required: true,
+      enum: ['fresher', '2-4 years', '5+ years']
+    },
+    timeLimit: {
+      type: Number, // in minutes
+      required: true
+    }
+  },
+  questions: [{
+    question: {
+      type: String,
+      required: true
+    },
+    options: [{
+      type: String,
+      required: true
+    }],
+    correctAnswer: {
+      type: Number, // index of correct option (0-3)
+      required: true
+    },
+    skill: {
+      type: String,
+      required: true
+    }
+  }],
+  userAnswers: [{
+    questionIndex: {
+      type: Number,
+      required: true
+    },
+    selectedOption: {
+      type: Number, // index of selected option (0-3)
+      required: true
+    },
+    isCorrect: {
+      type: Boolean,
+      required: true
+    }
+  }],
+  evaluation: {
+    totalScore: {
+      type: Number,
+      required: true
+    },
+    percentage: {
+      type: Number,
+      required: true
+    },
+    feedback: [{
+      questionIndex: {
+        type: Number,
+        required: true
+      },
+      correctAnswer: {
+        type: String,
+        required: true
+      },
+      explanation: {
+        type: String,
+        required: true
+      },
+      skillFocus: {
+        type: String,
+        required: true
+      }
+    }],
+    overallFeedback: {
+      type: String,
+      required: true
+    },
+    areasToImprove: [{
+      type: String
+    }]
+  },
+  examStatus: {
+    type: String,
+    enum: ['in-progress', 'completed', 'timeout'],
+    default: 'in-progress'
+  },
+  startTime: {
+    type: Date,
+    default: Date.now
+  },
+  endTime: {
+    type: Date
+  },
+  timeTaken: {
+    type: Number // in minutes
+  }
+}, {
+  timestamps: true
 });
 
-const MockTestSchema = new mongoose.Schema({
-  title: String,
-  role: String,
-  questions: [QuestionSchema]
-});
-
-export default mongoose.model("MockTest", MockTestSchema);
+module.exports = mongoose.model('MockTest', mockTestSchema);
