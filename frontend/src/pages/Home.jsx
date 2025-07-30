@@ -1,215 +1,504 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Lottie from 'lottie-react';
 import animationData from '../assets/tech-parallex.json';
-import '../styles/landingpage.css';
-import { Button } from '../components/ui/Button';
-import { Rocket, Star, Activity, Layers, Lightbulb, Users, HelpCircle, MessageCircle } from 'lucide-react';
-import { Parallax } from 'react-parallax';
-import { motion } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars, Sphere, Box } from '@react-three/drei';
-import '@fontsource/orbitron/700.css';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '../components/ui';
+import {
+  Rocket,
+  Star,
+  Zap,
+  Target,
+  TrendingUp,
+  Globe,
+  Shield,
+  ArrowRight,
+  CheckCircle,
+  MessageCircle,
+  Users,
+  Award,
+  Play,
+  ArrowUpRight,
+  CheckCircle2,
+  BarChart3,
+  Brain,
+  Cpu,
+  Database,
+  Lock
+} from 'lucide-react';
 
 const features = [
   {
-    icon: <Rocket size={32} color="#0d6efd" />, title: 'AI Resume Match', desc: 'Match your resume with job descriptions using AI and get instant scores.'
+    icon: <Rocket className="h-6 w-6" />,
+    title: "AI-Powered ATS Analysis",
+    desc: "Advanced resume parsing with intelligent skill matching and scoring algorithms.",
+    color: "text-blue-400"
   },
   {
-    icon: <Activity size={32} color="#28a745" />, title: 'Mock Exams', desc: 'Take JD-specific mock tests to sharpen your skills before applying.'
+    icon: <Target className="h-6 w-6" />,
+    title: "Smart Job Matching",
+    desc: "Precise job-description analysis with personalized recommendations.",
+    color: "text-green-400"
   },
   {
-    icon: <Star size={32} color="#ffc107" />, title: 'Interview Feedback', desc: 'Practice mock interviews and get personalized feedback.'
+    icon: <Zap className="h-6 w-6" />,
+    title: "Mock Assessments",
+    desc: "AI-generated tests based on job requirements with detailed feedback.",
+    color: "text-purple-400"
   },
   {
-    icon: <Lightbulb size={32} color="#17a2b8" />, title: 'Insights & Resources', desc: 'Access curated resources to fill your skill gaps.'
+    icon: <TrendingUp className="h-6 w-6" />,
+    title: "Performance Tracking",
+    desc: "Comprehensive analytics and progress monitoring for career growth.",
+    color: "text-orange-400"
   },
   {
-    icon: <Layers size={32} color="#dc3545" />, title: 'Track Progress', desc: 'See your growth over time with detailed dashboards.'
+    icon: <Globe className="h-6 w-6" />,
+    title: "Learning Resources",
+    desc: "Curated educational content and skill development materials.",
+    color: "text-cyan-400"
   },
-];
-
-const howItWorks = [
-  { step: 1, title: 'Upload Resume', desc: 'Easily upload your resume and job description.' },
-  { step: 2, title: 'AI Analysis', desc: 'Our AI matches your skills and highlights gaps.' },
-  { step: 3, title: 'Practice & Improve', desc: 'Take mock tests and interviews to level up.' },
-  { step: 4, title: 'Track Progress', desc: 'Monitor your growth with dashboards.' },
+  {
+    icon: <Shield className="h-6 w-6" />,
+    title: "Secure & Private",
+    desc: "Enterprise-grade security with complete data privacy protection.",
+    color: "text-red-400"
+  }
 ];
 
 const testimonials = [
-  { name: 'Amit S.', role: 'Software Engineer', quote: 'NextHire helped me land my dream job with its AI-powered feedback and mock interviews!' },
-  { name: 'Priya R.', role: 'Data Analyst', quote: 'The resume matcher and resources are top-notch. Highly recommended!' },
-  { name: 'John D.', role: 'Product Manager', quote: 'The dashboard and progress tracking kept me motivated throughout my job search.' },
-];
-
-const team = [
-  { name: 'Rohit Sharma', role: 'Founder & CEO', img: 'https://randomuser.me/api/portraits/men/32.jpg' },
-  { name: 'Sneha Patel', role: 'CTO', img: 'https://randomuser.me/api/portraits/women/44.jpg' },
-  { name: 'Alex Kim', role: 'Lead Designer', img: 'https://randomuser.me/api/portraits/men/65.jpg' },
+  {
+    quote: "NextHire helped me understand exactly what employers are looking for. My ATS score improved by 40%!",
+    name: "Sarah Johnson",
+    role: "Software Engineer",
+    company: "TechCorp",
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    improvement: "40%"
+  },
+  {
+    quote: "The mock tests are incredibly realistic. I felt much more confident in my actual interviews.",
+    name: "Michael Chen",
+    role: "Product Manager",
+    company: "InnovateLab",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    improvement: "85%"
+  },
+  {
+    quote: "Finally, a platform that actually helps you improve rather than just analyze. Highly recommended!",
+    name: "Emily Rodriguez",
+    role: "UX Designer",
+    company: "DesignStudio",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    improvement: "92%"
+  }
 ];
 
 const faqs = [
-  { q: 'How does the AI resume matcher work?', a: 'It analyzes your resume and compares it to job descriptions using advanced NLP.' },
-  { q: 'Is my data secure?', a: 'Absolutely. We use industry-standard encryption and never share your data.' },
-  { q: 'Can I use mock interviews for any role?', a: 'Yes, our platform supports a wide range of job roles and industries.' },
+  {
+    q: "How accurate is the ATS analysis?",
+    a: "Our AI-powered analysis achieves 95%+ accuracy in skill matching and scoring, using advanced NLP and machine learning algorithms."
+  },
+  {
+    q: "What file formats are supported?",
+    a: "We support PDF, DOCX, and TXT formats for resumes. Job descriptions can be pasted as text or uploaded as documents."
+  },
+  {
+    q: "Are my data and resumes secure?",
+    a: "Absolutely. We use enterprise-grade encryption and never share your data with third parties. Your privacy is our top priority."
+  },
+  {
+    q: "How do the mock tests work?",
+    a: "Mock tests are generated using AI based on the job description skills. Questions are tailored to the specific role and experience level."
+  },
+  {
+    q: "Can I retake assessments?",
+    a: "Yes! You can retake assessments multiple times to track your improvement and practice different scenarios."
+  }
+];
+
+const stats = [
+  { number: "50K+", label: "Active Users", icon: <Users className="h-5 w-5" /> },
+  { number: "95%", label: "ATS Accuracy", icon: <CheckCircle2 className="h-5 w-5" /> },
+  { number: "2M+", label: "Resumes Analyzed", icon: <Database className="h-5 w-5" /> },
+  { number: "500+", label: "Companies Trust Us", icon: <Shield className="h-5 w-5" /> }
 ];
 
 const Home = () => {
   return (
-    <div className="landing-root" style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
-      {/* 3D Universe Background */}
-      <Canvas className="universe-3d-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0 }}>
-        <ambientLight intensity={0.5} />
-        <Stars radius={120} depth={80} count={9000} factor={6} fade speed={1} />
-        {/* Add some floating 3D shapes for extra depth */}
-        <Sphere args={[1, 32, 32]} position={[-8, 2, -10]}>
-          <meshStandardMaterial color="#0ff" transparent opacity={0.18} />
-        </Sphere>
-        <Box args={[1.5, 1.5, 1.5]} position={[7, -2, -8]}>
-          <meshStandardMaterial color="#0d6efd" transparent opacity={0.13} />
-        </Box>
-        <Sphere args={[0.7, 32, 32]} position={[2, 5, -7]}>
-          <meshStandardMaterial color="#ff00cc" transparent opacity={0.15} />
-        </Sphere>
-        <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.3} />
-      </Canvas>
-      {/* Centered Hero Section */}
-      <section className="hero-section-glass" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
-        <motion.div
-          className='hero-glass-card'
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <h1 className='hero-title-futuristic'>NextHire: <span>Empowering Careers</span></h1>
-          <p className='hero-subtitle-futuristic'>AI-powered, 3D, and human-centric job matching for the next generation of talent.</p>
-          <Button className='cta-btn-glass'>Get Started</Button>
-        </motion.div>
-      </section>
-      {/* Features Section with 3D/animated cards */}
-      <section id="features" className="section features-section bg-light" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">Features</h2>
-        <div className="features-flex">
-          {features.map((feat, idx) => (
-            <motion.div
-              className="feature-card glass-card-3d"
-              key={idx}
-              whileHover={{ scale: 1.07, boxShadow: '0 8px 32px #0ff7' }}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: idx * 0.1 }}
-            >
-              <div className="feature-icon">{feat.icon}</div>
-              <h3 className="feature-title">{feat.title}</h3>
-              <p className="feature-desc">{feat.desc}</p>
-              {/* Add a floating 3D sphere for each card */}
-              <Canvas className="feature-3d-canvas">
-                <ambientLight intensity={0.3} />
-                <Sphere args={[0.3, 32, 32]} position={[0, 0, 0]}>
-                  <meshStandardMaterial color="#0ff" transparent opacity={0.18} />
-                </Sphere>
-              </Canvas>
-            </motion.div>
-          ))}
+    <div className="min-h-screen bg-black text-white">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-black via-gray-900 to-black">
+        <div className="container mx-auto px-4 py-24 lg:py-32">
+          <div className="mx-auto max-w-4xl text-center">
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, y: 50, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{
+                  duration: 1.2,
+                  ease: "easeOut",
+                  delay: 0.2
+                }}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.5 }}
+                >
+                  <Badge variant="secondary" className="mb-6 bg-blue-900/20 text-blue-300 border-blue-700">
+                    <Star className="h-3 w-3 mr-1" />
+                    AI-Powered Career Platform
+                  </Badge>
+                </motion.div>
+
+                <motion.h1
+                  className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl mb-6 text-white"
+                  initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{
+                    duration: 1.5,
+                    ease: "easeOut",
+                    delay: 0.8
+                  }}
+                >
+                  Transform Your
+                  <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent"> Career</span>
+                </motion.h1>
+
+                <motion.p
+                  className="mt-6 text-lg text-gray-300 sm:text-xl max-w-3xl mx-auto mb-8"
+                  initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{
+                    duration: 1.2,
+                    ease: "easeOut",
+                    delay: 1.2
+                  }}
+                >
+                  AI-powered resume analysis, smart skill matching, and personalized career development tools
+                  to help you land your dream job.
+                </motion.p>
+
+                <motion.div
+                  className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center"
+                  initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{
+                    duration: 1.0,
+                    ease: "easeOut",
+                    delay: 1.5
+                  }}
+                >
+                  <Button size="lg" className="text-base px-8 py-6 bg-blue-600 hover:bg-blue-700 text-white">
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="lg" className="text-base px-8 py-6 border-white text-white hover:bg-white hover:text-black">
+                    <Play className="mr-2 h-4 w-4" />
+                    Watch Demo
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="container mx-auto px-4 pb-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20, filter: "blur(5px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{
+                  duration: 0.8,
+                  delay: 2.0 + (index * 0.1),
+                  ease: "easeOut"
+                }}
+                className="text-center"
+              >
+                <div className="flex items-center justify-center mb-2 text-blue-400">
+                  {stat.icon}
+                </div>
+                <div className="text-3xl font-bold text-white">{stat.number}</div>
+                <div className="text-sm text-gray-400">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
-      {/* How It Works Section with animated steps */}
-      <section id="how-it-works" className="section howitworks-section" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">How It Works</h2>
-        <div className="howitworks-steps">
-          {howItWorks.map((step, idx) => (
-            <motion.div
-              className="howitworks-step glass-card-3d"
-              key={idx}
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 16px #0ff7' }}
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: idx * 0.1 }}
-            >
-              <div className="howitworks-stepnum">{step.step}</div>
-              <h4 className="howitworks-title">{step.title}</h4>
-              <p className="howitworks-desc">{step.desc}</p>
-            </motion.div>
-          ))}
+
+      {/* Features Section */}
+      <section className="py-24 bg-gray-900/50">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-white">
+              Everything you need to succeed
+            </h2>
+            <p className="mt-4 text-lg text-gray-300 max-w-3xl mx-auto">
+              Comprehensive tools designed to help you stand out in today's competitive job market
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+              >
+                <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-shadow bg-gray-800/50 border-gray-700">
+                  <CardHeader>
+                    <div className={`w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center ${feature.color} mb-4`}>
+                      {feature.icon}
+                    </div>
+                    <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base text-gray-300">
+                      {feature.desc}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
-      {/* Testimonials Section with glass cards */}
-      <section id="testimonials" className="section testimonials-section" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">Testimonials</h2>
-        <div className="testimonials-grid">
-          {testimonials.map((t, idx) => (
-            <motion.div
-              className="testimonial-card glass-card-3d"
-              key={idx}
-              whileHover={{ scale: 1.04, boxShadow: '0 4px 16px #0ff7' }}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: idx * 0.1 }}
-            >
-              <MessageCircle size={32} color="#0d6efd" />
-              <p className="testimonial-quote">"{t.quote}"</p>
-              <div className="testimonial-user">
-                <span className="testimonial-name">{t.name}</span>
-                <span className="testimonial-role">{t.role}</span>
-              </div>
-            </motion.div>
-          ))}
+
+      {/* How It Works Section */}
+      <section className="py-24 bg-black">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-white">
+              How it works
+            </h2>
+            <p className="mt-4 text-lg text-gray-300 max-w-3xl mx-auto">
+              Simple steps to transform your career prospects
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { step: "01", title: "Upload Resume & JD", desc: "Upload your resume and the job description you're targeting." },
+              { step: "02", title: "AI Analysis", desc: "Our AI analyzes skills, experience, and job requirements." },
+              { step: "03", title: "Get Insights", desc: "Receive detailed feedback, scores, and improvement suggestions." },
+              { step: "04", title: "Practice & Improve", desc: "Take mock tests and access learning resources to enhance skills." }
+            ].map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="text-center"
+              >
+                <Card className="border-0 shadow-lg bg-gray-800/50 border-gray-700">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                      {step.step}
+                    </div>
+                    <CardTitle className="text-xl text-white">{step.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base text-gray-300">
+                      {step.desc}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
-      {/* Team Section with glass cards */}
-      <section id="team" className="section team-section bg-light" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">Meet the Team</h2>
-        <div className="team-row">
-          {team.map((member, idx) => (
-            <motion.div
-              className="team-card glass-card-3d"
-              key={idx}
-              whileHover={{ scale: 1.04, boxShadow: '0 4px 16px #0ff7' }}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: idx * 0.1 }}
-            >
-              <img src={member.img} alt={member.name} className="team-img" />
-              <h4 className="team-name">{member.name}</h4>
-              <span className="team-role">{member.role}</span>
-            </motion.div>
-          ))}
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gray-900/50">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-white">
+              What our users say
+            </h2>
+            <p className="mt-4 text-lg text-gray-300 max-w-3xl mx-auto">
+              Join thousands of professionals who have transformed their careers
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+              >
+                <Card className="h-full border-0 shadow-lg bg-gray-800/50 border-gray-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center mb-4">
+                      <MessageCircle className="h-6 w-6 text-blue-400 mr-3" />
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <blockquote className="text-lg text-gray-200 mb-6 italic">
+                      "{testimonial.quote}"
+                    </blockquote>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <img
+                          src={testimonial.avatar}
+                          alt={testimonial.name}
+                          className="w-12 h-12 rounded-full mr-4 object-cover"
+                        />
+                        <div>
+                          <div className="font-semibold text-white">{testimonial.name}</div>
+                          <div className="text-sm text-gray-400">{testimonial.role} at {testimonial.company}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-green-400">{testimonial.improvement}</div>
+                        <div className="text-sm text-gray-400">Improvement</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
-      {/* FAQ Section with glass cards */}
-      <section id="faq" className="section faq-section" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">Frequently Asked Questions</h2>
-        <div className="faq-list">
-          {faqs.map((faq, idx) => (
-            <motion.details
-              className="faq-item glass-card-3d"
-              key={idx}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: idx * 0.08 }}
-            >
-              <summary className="faq-question"><HelpCircle size={20} /> {faq.q}</summary>
-              <div className="faq-answer">{faq.a}</div>
-            </motion.details>
-          ))}
+
+      {/* FAQ Section */}
+      <section className="py-24 bg-black">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-white">
+              Frequently asked questions
+            </h2>
+            <p className="mt-4 text-lg text-gray-300">
+              Everything you need to know about NextHire
+            </p>
+          </motion.div>
+
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map((faq, index) => (
+              <AccordionItem key={index} value={`item-${index}`} className="border-gray-700">
+                <AccordionTrigger className="text-left text-lg font-semibold text-white hover:text-blue-400">
+                  {faq.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-base text-gray-300">
+                  {faq.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
-      {/* Contact Section with glass card */}
-      <section id="contact" className="section contact-section bg-light" style={{ position: 'relative', zIndex: 2 }}>
-        <h2 className="section-title">Contact Us</h2>
-        <motion.form className="contact-form glass-card-3d"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          onSubmit={e => e.preventDefault()}>
-          <input type="text" className="contact-input" placeholder="Your Name" required />
-          <input type="email" className="contact-input" placeholder="Your Email" required />
-          <textarea className="contact-input" placeholder="Your Message" rows={4} required />
-          <Button className="contact-btn" type="submit">Send Message</Button>
-        </motion.form>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-gray-900/50">
+        <div className="container mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="max-w-4xl mx-auto"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6 text-white">
+              Ready to transform your career?
+            </h2>
+            <p className="text-xl mb-8 text-gray-300 max-w-2xl mx-auto">
+              Join thousands of professionals who have already improved their job prospects with NextHire
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="text-base px-8 py-6 bg-blue-600 hover:bg-blue-700 text-white">
+                Start Free Trial
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline" className="text-base px-8 py-6 border-white text-white hover:bg-white hover:text-black">
+                Schedule Demo
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       </section>
+
       {/* Footer */}
-      <footer className="footer" style={{ position: 'relative', zIndex: 2 }}>
-        &copy; {new Date().getFullYear()} NextHire. All rights reserved.
+      <footer className="bg-gray-900 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-2xl font-bold mb-4 text-white">NextHire</h3>
+              <p className="text-gray-400">
+                AI-powered career platform helping professionals succeed in the modern job market.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Product</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">ATS Analysis</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Mock Tests</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Learning Resources</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Career Tracking</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Company</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Support</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; {new Date().getFullYear()} NextHire. All rights reserved.</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
