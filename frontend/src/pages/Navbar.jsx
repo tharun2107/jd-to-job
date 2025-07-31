@@ -44,10 +44,16 @@ const Navbar = () => {
 
   const navigationItems = [
     {
+      title: "Resume Upload",
+      href: "/resume-upload",
+      description: "Upload and analyze your resume with AI",
+      icon: <FileText className="h-4 w-4" />
+    },
+    {
       title: "ATS Analyzer",
       href: "/ats-analysis",
       description: "AI-powered resume analysis and skill matching",
-      icon: <FileText className="h-4 w-4" />
+      icon: <BarChart3 className="h-4 w-4" />
     },
     {
       title: "Resources",
@@ -138,15 +144,16 @@ const Navbar = () => {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <Link to="/">
-                    <NavigationMenuLink
+                  <NavigationMenuLink asChild>
+                    <Link
+                      to="/"
                       className={`group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${
                         isActive('/') ? 'bg-gray-800 text-white' : 'text-gray-300'
                       }`}
                     >
                       Home
-                    </NavigationMenuLink>
-                  </Link>
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
@@ -179,15 +186,16 @@ const Navbar = () => {
 
                 {navigationItems.map((item, index) => (
                   <NavigationMenuItem key={index}>
-                    <Link to={item.href}>
-                      <NavigationMenuLink
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to={item.href}
                         className={`group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${
                           isActive(item.href) ? 'bg-gray-800 text-white' : 'text-gray-300'
                         }`}
                       >
                         {item.title}
-                      </NavigationMenuLink>
-                    </Link>
+                      </Link>
+                    </NavigationMenuLink>
                   </NavigationMenuItem>
                 ))}
               </NavigationMenuList>

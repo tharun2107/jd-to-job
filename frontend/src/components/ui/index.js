@@ -18,4 +18,17 @@ export {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from './sheet'; 
+} from './sheet';
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+} from './select';
+export { Input } from './input';
+export { Textarea } from './textarea';
+export { Label } from './label';
+export { Separator } from './separator'; 
