@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Lottie from 'lottie-react';
 import animationData from '../assets/tech-parallex.json';
@@ -43,37 +44,43 @@ const features = [
     icon: <Rocket className="h-6 w-6" />,
     title: "AI-Powered ATS Analysis",
     desc: "Advanced resume parsing with intelligent skill matching and scoring algorithms.",
-    color: "text-blue-400"
+    color: "text-blue-400",
+    link: "/resume-upload"
   },
   {
     icon: <Target className="h-6 w-6" />,
     title: "Smart Job Matching",
     desc: "Precise job-description analysis with personalized recommendations.",
-    color: "text-green-400"
+    color: "text-green-400",
+    link: "/ats-analysis"
   },
   {
     icon: <Zap className="h-6 w-6" />,
     title: "Mock Assessments",
     desc: "AI-generated tests based on job requirements with detailed feedback.",
-    color: "text-purple-400"
+    color: "text-purple-400",
+    link: "/mock-test"
   },
   {
     icon: <TrendingUp className="h-6 w-6" />,
     title: "Performance Tracking",
     desc: "Comprehensive analytics and progress monitoring for career growth.",
-    color: "text-orange-400"
+    color: "text-orange-400",
+    link: "/dashboard"
   },
   {
     icon: <Globe className="h-6 w-6" />,
     title: "Learning Resources",
     desc: "Curated educational content and skill development materials.",
-    color: "text-cyan-400"
+    color: "text-cyan-400",
+    link: "/resources"
   },
   {
     icon: <Shield className="h-6 w-6" />,
     title: "Secure & Private",
     desc: "Enterprise-grade security with complete data privacy protection.",
-    color: "text-red-400"
+    color: "text-red-400",
+    link: "/profile"
   }
 ];
 
@@ -264,20 +271,28 @@ const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                className="cursor-pointer"
               >
-                <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-shadow bg-gray-800/50 border-gray-700">
-                  <CardHeader>
-                    <div className={`w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center ${feature.color} mb-4`}>
-                      {feature.icon}
-                    </div>
-                    <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-base text-gray-300">
-                      {feature.desc}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
+                <Link to={feature.link}>
+                  <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gray-800/50 border-gray-700 hover:border-blue-600 hover:bg-gray-800/70 group">
+                    <CardHeader>
+                      <div className={`w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center ${feature.color} mb-4 group-hover:bg-gray-600 transition-colors`}>
+                        {feature.icon}
+                      </div>
+                      <CardTitle className="text-xl text-white group-hover:text-blue-300 transition-colors">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-base text-gray-300 group-hover:text-gray-200 transition-colors">
+                        {feature.desc}
+                      </CardDescription>
+                      <div className="mt-4 flex items-center text-blue-400 group-hover:text-blue-300 transition-colors">
+                        <span className="text-sm font-medium">Learn more</span>
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               </motion.div>
             ))}
           </div>
