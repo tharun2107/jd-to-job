@@ -22,6 +22,7 @@ const analyzeRoutes = require("./routes/analyzeRoute"); // Ensure this route is 
 const resourcesRoute = require('./routes/resources');
 const mockTestRoute = require('./routes/mockTest');
 const mockInterviewRoute = require('./routes/mockInterview');
+const resumeRoute = require('./routes/resume');
 
 const app = express();
 
@@ -34,7 +35,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-app.use(express.json());
+// Increase payload limit for base64 images
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 
 mongoose
@@ -47,6 +50,7 @@ app.use("/api", analyzeRoutes); // Use the analyze route
 app.use('/api/resources', resourcesRoute);
 app.use('/api/mocktest', mockTestRoute);
 app.use('/api/mockinterview', mockInterviewRoute);
+app.use('/api/resumes', resumeRoute);
 
 app.get("/", (req, res) => {
   res.send("🚀 Backend Running...");

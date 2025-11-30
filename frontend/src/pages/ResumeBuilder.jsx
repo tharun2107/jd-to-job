@@ -1,8 +1,18 @@
-import React, { useState, useRef } from "react";
-
+import React, { useState, useRef, useEffect } from "react";
+import axios from "axios";
 import Skills from './Skills';
 import Education from './Education';
 import Projects from './Projects';
+
+const getToken = () => localStorage.getItem('token');
+
+// Template definitions
+const TEMPLATES = [
+  { id: 'classic', name: 'Classic ATS', description: 'Simple, clean format', preview: '📄', hasPhoto: false, color: '#111' },
+  { id: 'professional', name: 'Professional Blue', description: 'Modern with photo', preview: '💼', hasPhoto: true, color: '#0066cc' },
+  { id: 'modern', name: 'Modern Minimal', description: 'Clean minimal design', preview: '✨', hasPhoto: false, color: '#2563eb' },
+  { id: 'executive', name: 'Executive', description: 'Executive style with photo', preview: '👔', hasPhoto: true, color: '#1e3a5f' }
+];
 
 const initialForms = {
   experience: { company: '', role: '', duration: '', details: [''] },
@@ -140,10 +150,158 @@ function App() {
   const [customSectionItem, setCustomSectionItem] = useState("");
   const previewRef = useRef();
 
+  // Template and save states
+  const [selectedTemplate, setSelectedTemplate] = useState('classic');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [savedResumes, setSavedResumes] = useState([]);
+  const [currentResumeId, setCurrentResumeId] = useState(null);
+  const [resumeName, setResumeName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [showSavedList, setShowSavedList] = useState(false);
+
   // Header links state for add/edit
   const [linkLabel, setLinkLabel] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [editingLinkIdx, setEditingLinkIdx] = useState(null);
+
+  // Fetch saved resumes on mount
+  useEffect(() => {
+    fetchSavedResumes();
+  }, []);
+
+  const fetchSavedResumes = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      const res = await axios.get('http://localhost:5001/api/resumes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSavedResumes(res.data.resumes || []);
+    } catch (err) {
+      console.error('Error fetching saved resumes:', err);
+    }
+  };
+
+  const handleSaveResume = async () => {
+    if (!resumeName.trim()) {
+      alert('Please enter a name for your resume');
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = getToken();
+      const data = { name: resumeName, template: selectedTemplate, photoUrl, resumeData: resume, skillsGroups };
+      let res;
+      if (currentResumeId) {
+        res = await axios.put(`http://localhost:5001/api/resumes/${currentResumeId}`, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        res = await axios.post('http://localhost:5001/api/resumes', data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCurrentResumeId(res.data.resume._id);
+      }
+      fetchSavedResumes();
+      alert('Resume saved successfully!');
+    } catch (err) {
+      console.error('Error saving resume:', err);
+      alert('Failed to save resume');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLoadResume = async (resumeId) => {
+    try {
+      const token = getToken();
+      const res = await axios.get(`http://localhost:5001/api/resumes/${resumeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const saved = res.data.resume;
+      setResume(saved.resumeData);
+      setSkillsGroups(saved.skillsGroups || []);
+      setSelectedTemplate(saved.template || 'classic');
+      setPhotoUrl(saved.photoUrl || '');
+      setResumeName(saved.name);
+      setCurrentResumeId(saved._id);
+      setShowSavedList(false);
+    } catch (err) {
+      console.error('Error loading resume:', err);
+      alert('Failed to load resume');
+    }
+  };
+
+  const handleDeleteResume = async (resumeId) => {
+    if (!window.confirm('Delete this resume?')) return;
+    try {
+      const token = getToken();
+      await axios.delete(`http://localhost:5001/api/resumes/${resumeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchSavedResumes();
+      if (currentResumeId === resumeId) {
+        setCurrentResumeId(null);
+        setResumeName('');
+      }
+    } catch (err) {
+      alert('Failed to delete resume');
+    }
+  };
+
+  const handleNewResume = () => {
+    setResume({
+      personalInfo: { name: "", email: "", phone: "", links: [] },
+      summary: "", skills: [], experience: [], projects: [],
+      education: [], certifications: [], achievements: [], hobbies: [], customSections: [],
+    });
+    setSkillsGroups([]);
+    setCurrentResumeId(null);
+    setResumeName('');
+    setPhotoUrl('');
+    setShowSavedList(false);
+  };
+
+  // Compress image before storing
+  const compressImage = (file, maxWidth = 200, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        // Compress to ~200x200 with 70% quality
+        const compressedUrl = await compressImage(file, 200, 0.7);
+        setPhotoUrl(compressedUrl);
+        console.log('Photo compressed, size:', Math.round(compressedUrl.length / 1024), 'KB');
+      } catch (err) {
+        console.error('Error compressing image:', err);
+        // Fallback to original
+        const reader = new FileReader();
+        reader.onloadend = () => setPhotoUrl(reader.result);
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const currentTemplateData = TEMPLATES.find(t => t.id === selectedTemplate);
 
   // Handlers for basic fields
   const handlePersonalInfoChange = (e) => {
@@ -230,13 +388,22 @@ function App() {
   const handleDownloadPDF = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
     if (previewRef.current) {
-      html2pdf().from(previewRef.current).set({
-        margin: 0,
-        filename: `${resume.personalInfo.name || "resume"}.pdf`,
+      // Clone the element to avoid modifying the original
+      const element = previewRef.current;
+      
+      html2pdf().from(element).set({
+        margin: [0.2, 0, 0.2, 0], // Small top/bottom margins
+        filename: `${resume.personalInfo.name || "resume"}_${selectedTemplate}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          letterRendering: true,
+          allowTaint: true
+        },
         jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       }).save();
     } else {
       alert("Preview not found!");
@@ -263,10 +430,175 @@ function App() {
   }));
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', background: 'linear-gradient(135deg, #e0e7ff 0%, #f7f7fa 100%)' }}>
+    <div className="app-container" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', padding: '1rem' }}>
+      {/* Top Bar */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto 1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={() => setShowSavedList(!showSavedList)} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontWeight: 600 }}>
+          📂 My Resumes ({savedResumes.length})
+        </button>
+        <button onClick={handleNewResume} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontWeight: 600 }}>
+          ➕ New
+        </button>
+      </div>
+
+      {/* Saved Resumes List */}
+      {showSavedList && (
+        <div style={{ maxWidth: '1400px', margin: '0 auto 1rem', background: '#1e293b', borderRadius: 12, padding: '1rem' }}>
+          <h3 style={{ color: '#fff', margin: '0 0 1rem 0' }}>Your Saved Resumes</h3>
+          {savedResumes.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>No saved resumes. Create one and save it!</p>
+          ) : (
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              {savedResumes.map(r => (
+                <div key={r._id} style={{ background: '#334155', borderRadius: 8, padding: '1rem', minWidth: 200, border: currentResumeId === r._id ? '2px solid #3b82f6' : 'none' }}>
+                  <div style={{ color: '#fff', fontWeight: 600 }}>{r.name}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{new Date(r.updatedAt).toLocaleDateString()}</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button onClick={() => handleLoadResume(r._id)} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>Edit</button>
+                    <button onClick={() => handleDeleteResume(r._id)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Template Selection with Visual Previews */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto 1rem', background: '#1e293b', borderRadius: 12, padding: '1rem 1.5rem' }}>
+        <h3 style={{ color: '#fff', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>📋 Select Resume Template</h3>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Classic Template Preview */}
+          <div onClick={() => setSelectedTemplate('classic')} style={{
+            background: selectedTemplate === 'classic' ? '#2563eb' : '#334155',
+            borderRadius: 8, padding: '0.75rem', cursor: 'pointer', width: '140px',
+            border: selectedTemplate === 'classic' ? '3px solid #60a5fa' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}>
+            <div style={{ background: '#fff', borderRadius: 4, height: '100px', padding: '8px', marginBottom: '0.5rem' }}>
+              <div style={{ textAlign: 'center', borderBottom: '2px solid #111', paddingBottom: 4, marginBottom: 4 }}>
+                <div style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '1px' }}>JOHN DOE</div>
+                <div style={{ fontSize: '5px', color: '#666' }}>email@mail.com | 123-456</div>
+              </div>
+              <div style={{ fontSize: '5px', fontWeight: 600, borderBottom: '1px solid #ccc', marginBottom: 2 }}>PROFILE</div>
+              <div style={{ fontSize: '4px', color: '#444', marginBottom: 3 }}>Professional summary text here...</div>
+              <div style={{ fontSize: '5px', fontWeight: 600, borderBottom: '1px solid #ccc', marginBottom: 2 }}>EDUCATION</div>
+              <div style={{ fontSize: '4px', color: '#444' }}>University Name • Degree</div>
+            </div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Classic ATS</div>
+            <div style={{ color: '#94a3b8', fontSize: '0.7rem', textAlign: 'center' }}>Simple & Clean</div>
+          </div>
+
+          {/* Professional Blue Template Preview */}
+          <div onClick={() => setSelectedTemplate('professional')} style={{
+            background: selectedTemplate === 'professional' ? '#2563eb' : '#334155',
+            borderRadius: 8, padding: '0.75rem', cursor: 'pointer', width: '140px',
+            border: selectedTemplate === 'professional' ? '3px solid #60a5fa' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}>
+            <div style={{ background: '#fff', borderRadius: 4, height: '100px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+              <div style={{ background: '#0066cc', color: '#fff', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: '20px', height: '20px', background: 'rgba(255,255,255,0.3)', borderRadius: 2 }}></div>
+                <div>
+                  <div style={{ fontSize: '7px', fontWeight: 700 }}>JOHN DOE</div>
+                  <div style={{ fontSize: '4px', opacity: 0.9 }}>Software Engineer</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', height: '62px' }}>
+                <div style={{ width: '40%', background: '#f0f7ff', padding: 4 }}>
+                  <div style={{ fontSize: '4px', color: '#0066cc', fontWeight: 600 }}>SKILLS</div>
+                  <div style={{ fontSize: '3px', color: '#444' }}>React • Node • JS</div>
+                </div>
+                <div style={{ flex: 1, padding: 4 }}>
+                  <div style={{ fontSize: '4px', color: '#0066cc', fontWeight: 600 }}>EXPERIENCE</div>
+                  <div style={{ fontSize: '3px', color: '#444' }}>Company Name</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Professional</div>
+            <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+              <span style={{ background: '#10b981', color: '#fff', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4 }}>Photo</span>
+              <span style={{ background: '#0066cc', color: '#fff', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4 }}>2-Col</span>
+            </div>
+          </div>
+
+          {/* Modern Minimal Template Preview */}
+          <div onClick={() => setSelectedTemplate('modern')} style={{
+            background: selectedTemplate === 'modern' ? '#2563eb' : '#334155',
+            borderRadius: 8, padding: '0.75rem', cursor: 'pointer', width: '140px',
+            border: selectedTemplate === 'modern' ? '3px solid #60a5fa' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}>
+            <div style={{ background: '#fff', borderRadius: 4, height: '100px', padding: '8px', marginBottom: '0.5rem' }}>
+              <div style={{ borderBottom: '1px solid #2563eb', paddingBottom: 6, marginBottom: 6 }}>
+                <div style={{ fontSize: '9px', fontWeight: 300, letterSpacing: '1px' }}>John Doe</div>
+                <div style={{ fontSize: '4px', color: '#666', display: 'flex', gap: 6 }}>
+                  <span>email@mail.com</span><span style={{ color: '#2563eb' }}>linkedin.com</span>
+                </div>
+              </div>
+              <div style={{ fontSize: '5px', color: '#2563eb', letterSpacing: '1px', fontWeight: 400, marginBottom: 2 }}>PROFILE</div>
+              <div style={{ fontSize: '4px', color: '#444', marginBottom: 4, lineHeight: 1.4 }}>Clean minimal design with elegant typography...</div>
+              <div style={{ fontSize: '5px', color: '#2563eb', letterSpacing: '1px', fontWeight: 400, marginBottom: 2 }}>EDUCATION</div>
+            </div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Modern</div>
+            <div style={{ color: '#94a3b8', fontSize: '0.7rem', textAlign: 'center' }}>Minimal & Elegant</div>
+          </div>
+
+          {/* Executive Template Preview */}
+          <div onClick={() => setSelectedTemplate('executive')} style={{
+            background: selectedTemplate === 'executive' ? '#2563eb' : '#334155',
+            borderRadius: 8, padding: '0.75rem', cursor: 'pointer', width: '140px',
+            border: selectedTemplate === 'executive' ? '3px solid #60a5fa' : '2px solid transparent',
+            transition: 'all 0.2s'
+          }}>
+            <div style={{ background: '#fff', borderRadius: 4, height: '100px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+              <div style={{ background: '#f8f9fa', borderBottom: '3px solid #1e3a5f', padding: '6px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '7px', fontWeight: 700, color: '#1e3a5f' }}>JOHN DOE</div>
+                  <div style={{ fontSize: '4px', color: '#1e3a5f', fontStyle: 'italic' }}>Executive Director</div>
+                </div>
+                <div style={{ width: '18px', height: '18px', background: '#1e3a5f', borderRadius: '50%' }}></div>
+              </div>
+              <div style={{ padding: '4px 8px' }}>
+                <div style={{ background: '#f8f9fa', borderLeft: '2px solid #1e3a5f', padding: '3px 6px', marginBottom: 4 }}>
+                  <div style={{ fontSize: '4px', color: '#444', fontStyle: 'italic' }}>Executive summary...</div>
+                </div>
+                <div style={{ fontSize: '5px', color: '#1e3a5f', fontWeight: 600 }}>EXPERIENCE</div>
+              </div>
+            </div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Executive</div>
+            <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+              <span style={{ background: '#10b981', color: '#fff', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4 }}>Photo</span>
+              <span style={{ background: '#1e3a5f', color: '#fff', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4 }}>Formal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
       {/* Left: Resume Form */}
-      <div style={{ width: '420px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '2rem', margin: '2rem 1rem', minHeight: '80vh', overflowY: 'auto', maxHeight: '90vh' }}>
-        <h2 style={{ fontSize: '1.5rem', color: '#111', marginBottom: '1.5rem', fontWeight: 700, letterSpacing: '0.5px' }}>Resume Builder</h2>
+      <div style={{ width: '420px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '2rem', minHeight: '80vh', overflowY: 'auto', maxHeight: '85vh' }}>
+        {/* Save Controls */}
+        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f0fdf4', borderRadius: 8, border: '1px solid #86efac' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input type="text" placeholder="Resume name..." value={resumeName} onChange={e => setResumeName(e.target.value)} style={{ flex: 1, padding: '6px', borderRadius: 4, border: '1px solid #ccc' }} />
+            <button onClick={handleSaveResume} disabled={saving} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>
+              {saving ? '...' : currentResumeId ? '💾 Update' : '💾 Save'}
+            </button>
+          </div>
+          {currentResumeId && <div style={{ fontSize: '0.75rem', color: '#059669', marginTop: 4 }}>✓ Editing: {resumeName}</div>}
+        </div>
+
+        {/* Photo Upload for templates with photo */}
+        {currentTemplateData?.hasPhoto && (
+          <fieldset style={{ border: 'none', marginBottom: '1rem' }}>
+            <legend style={{ fontWeight: 'bold', color: '#111', fontSize: '1rem' }}>Profile Photo</legend>
+            <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ fontSize: '0.85rem' }} />
+            {photoUrl && <img src={photoUrl} alt="Preview" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, marginTop: 8 }} />}
+          </fieldset>
+        )}
+
+        <h2 style={{ fontSize: '1.5rem', color: '#111', marginBottom: '1rem', fontWeight: 700 }}>Resume Details</h2>
         <fieldset style={{ border: 'none', marginBottom: '1.5rem' }}>
           <legend style={{ fontWeight: 'bold', color: '#111', fontSize: '1.15rem', letterSpacing: '0.5px' }}>Personal Info</legend>
           <input name="name" placeholder="Full Name" value={resume.personalInfo.name} onChange={handlePersonalInfoChange} style={{ width: '100%', margin: '8px 0', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem' }} />
@@ -327,202 +659,145 @@ function App() {
         </fieldset>
       </div>
       {/* Right: ATS Resume Preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f7f7fa', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '2.5rem 2.5rem 2.5rem 2.5rem', margin: '2rem 1rem', minHeight: '80vh', overflowY: 'auto', maxHeight: '90vh', overflowX: 'hidden' }}>
-        {/* Download button OUTSIDE previewRef so it is not included in PDF */}
-        <button onClick={handleDownloadPDF} style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '1rem', marginBottom: '1.2em', alignSelf: 'center' }}>Download PDF</button>
-        <style>{`
-          @media (max-width: 600px) {
-            .resume-preview-mobile {
-              padding: 1rem !important;
-              font-size: 0.98rem !important;
-            }
-            .resume-header-mobile {
-              font-size: 1.1rem !important;
-            }
-          }
-        `}</style>
-              <div ref={previewRef} className="resume-preview-mobile" style={{ width: '210mm', maxWidth: '210mm', boxShadow: '0 1px 8px #e0e7ff', margin: '0 auto', position: 'relative', background: '#fff', padding: '2.5rem 2.5rem', boxSizing: 'border-box', overflow: 'visible' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.2rem' }}>
-            <h1 className="resume-header-mobile" style={{ fontSize: '1.5rem', color: '#111', fontWeight: 700, letterSpacing: '0.5px', margin: '0 0 0.2em 0', textAlign: 'center' }}>{resume.personalInfo.name || 'Your Name'}</h1>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: '1rem', margin: '0 0 0.1em 0', gap: '0.1em', color: '#222' }}>
-              {resume.personalInfo.phone && <span>{resume.personalInfo.phone}</span>}
-              {resume.personalInfo.email && <span>| {resume.personalInfo.email}</span>}
-              {resume.personalInfo.links.map((l, idx) => (
-                <span key={idx}>| <a href={l.url} target="_blank" rel="noopener noreferrer" style={contactLink}>{l.label}</a></span>
-              ))}
-            </div>
-          </div>
-          {/* PROFILE section header and summary */}
-          {resume.summary && <div><div style={sectionHeader}>PROFILE</div>
-            <div style={{ margin: '0.7em 0 1.2em 0', color: '#222', fontSize: '1.05rem' }}>{resume.summary}</div>
-          </div>}
-          {/* Education */}
-          {resume.education.length > 0 && <div style={{ pageBreakInside: 'avoid' }}><div style={sectionHeader}>EDUCATION</div>
-            {resume.education.map((ed, idx) => (
-              <div key={idx} style={{ marginBottom: '0.3em', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div><span style={{ fontWeight: 600 }}>{ed.institution}</span>{ed.location && <span>, {ed.location}</span>}</div>
-                  <div style={{ color: '#444', fontSize: '0.98rem', fontWeight: 400 }}>{ed.duration}</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f7f7fa', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '1.5rem', minHeight: '80vh', overflowY: 'auto', maxHeight: '85vh', overflowX: 'hidden' }}>
+        {/* Download button */}
+        <button onClick={handleDownloadPDF} style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', cursor: 'pointer', fontWeight: 600, fontSize: '1rem', marginBottom: '1rem' }}>📥 Download PDF</button>
+        
+        {/* Template-based Preview */}
+        <div ref={previewRef} id="resume-preview" style={{ width: '210mm', maxWidth: '210mm', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', background: '#fff', overflow: 'hidden' }}>
+          
+          {/* ============ CLASSIC TEMPLATE ============ */}
+          {selectedTemplate === 'classic' && (
+            <div style={{ fontFamily: 'Georgia, serif' }}>
+              {/* Header */}
+              <div style={{ padding: '2rem 2.5rem 1rem', textAlign: 'center', borderBottom: '2px solid #111' }}>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '2px', color: '#111' }}>{resume.personalInfo.name || 'Your Name'}</h1>
+                <div style={{ fontSize: '0.95rem', color: '#333', marginTop: '0.5rem' }}>
+                  {resume.personalInfo.phone && <span>{resume.personalInfo.phone}</span>}
+                  {resume.personalInfo.email && <span> | {resume.personalInfo.email}</span>}
+                  {resume.personalInfo.links.map((l, idx) => (
+                    <span key={idx}> | <a href={l.url} target="_blank" rel="noopener noreferrer" style={contactLink}>{l.label}</a></span>
+                  ))}
                 </div>
-                <div style={{ height: '0.2em' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div style={{ textTransform: 'capitalize' }}>{ed.degree}{ed.branch && ` in ${ed.branch}`}</div>
-                  <div style={{ color: '#444', fontSize: '0.98rem', fontWeight: 400 }}>{ed.cgpa && `CGPA: ${ed.cgpa}`}</div>
-                </div>
-                {ed.extra && <div style={{ fontSize: '0.98rem', color: '#222', marginLeft: 2 }}>{ed.extra}</div>}
               </div>
-            ))}
-          </div>}
-          {/* Skills */}
-          {skillsGroups.length > 0 && <div style={{ pageBreakInside: 'avoid' }}><div style={sectionHeader}>SKILLS</div>
-            <div style={{ margin: '0.2em 0 0.7em 0', color: '#222', fontSize: '1.01rem' }}>
-              {skillsGroups.map((group, idx) => (
-                <div key={idx} style={{ marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600 }}>{group.name}:</span> {group.skills.join(', ')}
-                </div>
-              ))}
-            </div>
-          </div>}
-          {/* Experience */}
-          {resume.experience.length > 0 && <div style={{ pageBreakInside: 'avoid' }}><div style={sectionHeader}>EXPERIENCE</div>
-            {resume.experience.map((exp, idx) => (
-              <div key={idx} style={{ marginBottom: '0.3em' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={label}>{exp.role}</span> <span style={dateStyle}>{exp.duration}</span>
-                </div>
-                <div style={{ fontWeight: 500 }}>{exp.company}</div>
-                <ul style={bulletList}>
-                  {(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}
-                </ul>
+              {/* Content */}
+              <div style={{ padding: '1rem 2.5rem 2rem' }}>
+                {resume.summary && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>PROFILE</div><div style={{ color: '#222', fontSize: '1rem', lineHeight: 1.5 }}>{resume.summary}</div></div>}
+                {resume.education.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>EDUCATION</div>{resume.education.map((ed, idx) => (<div key={idx} style={{ marginBottom: '0.5em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600 }}>{ed.institution}{ed.location && `, ${ed.location}`}</span><span style={{ color: '#444' }}>{ed.duration}</span></div><div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{ed.degree}{ed.branch && ` in ${ed.branch}`}</span>{ed.cgpa && <span style={{ color: '#444' }}>CGPA: {ed.cgpa}</span>}</div></div>))}</div>}
+                {skillsGroups.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>SKILLS</div><div>{skillsGroups.map((g, i) => <div key={i}><strong>{g.name}:</strong> {g.skills.join(', ')}</div>)}</div></div>}
+                {resume.experience.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>EXPERIENCE</div>{resume.experience.map((exp, idx) => (<div key={idx} style={{ marginBottom: '0.5em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600 }}>{exp.role}</span><span style={{ color: '#444' }}>{exp.duration}</span></div><div style={{ fontWeight: 500 }}>{exp.company}</div><ul style={bulletList}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {normalizedProjects.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '0.5em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 600 }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0645AD', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#444' }}>{proj.monthYear}</span></div><ul style={bulletList}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {resume.certifications.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>CERTIFICATIONS</div><ul style={bulletList}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
+                {resume.achievements.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>ACHIEVEMENTS</div><ul style={bulletList}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
               </div>
-            ))}
-          </div>}
-          {/* Projects */}
-          {/* {normalizedProjects.length > 0 && <div style={{ pageBreakInside: 'avoid' }}><div style={sectionHeader}>PROJECTS</div>
-            {normalizedProjects.map((proj, idx) => (
-              <div key={idx} style={{ marginBottom: '0.3em', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <div>
-                    <span style={{ fontWeight: 600 }}>{proj.title}</span>
-                    {proj.techStack && proj.techStack.length > 0 && <span style={{ fontStyle: 'italic', fontSize: '0.98rem', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}
-                    {proj.links && proj.links.length > 0 && <span style={{ marginLeft: 8 }}>{proj.links.map((l, lIdx) => l && l.label && l.url && <a key={lIdx} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0645AD', textDecoration: 'underline', marginLeft: lIdx > 0 ? 8 : 0 }}>{l.label}</a>)}</span>}
-                  </div>
-                  <div style={{ color: '#444', fontSize: '0.98rem', fontWeight: 400 }}>{proj.monthYear}</div>
-                </div>
-                <ul style={{ listStyle: 'disc', marginLeft: '1.2em', color: '#222', fontSize: '1.01rem' }}>
-                  {proj.description && proj.description.map((desc, dIdx) => desc && <li key={dIdx} style={{ marginBottom: '0.2em' }}>{desc}</li>)}
-                </ul>
-              </div>
-            ))}
-          </div>} */}
-          {normalizedProjects.length > 0 && (
-            <div style={{ pageBreakInside: 'avoid', marginBottom: '0.5em' }}>
-              <div style={{ ...sectionHeader, marginBottom: '0.1em' }}>PROJECTS</div>
-              {normalizedProjects.map((proj, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    marginBottom: '0.2em',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <div>
-                      <span style={{ fontWeight: 600 }}>{proj.title}</span>
-                      {proj.techStack && proj.techStack.length > 0 && (
-                        <span style={{ fontStyle: 'italic', fontSize: '0.98rem', marginLeft: 8 }}>
-                          {proj.techStack.join(', ')}
-                        </span>
-                      )}
-                      {proj.links && proj.links.length > 0 && (
-                        <span style={{ marginLeft: 8 }}>
-                          {proj.links.map(
-                            (l, lIdx) =>
-                              l &&
-                              l.label &&
-                              l.url && (
-                                <a
-                                  key={lIdx}
-                                  href={l.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    color: '#0645AD',
-                                    textDecoration: 'underline',
-                                    marginLeft: lIdx > 0 ? 8 : 0,
-                                  }}
-                                >
-                                  {l.label}
-                                </a>
-                              )
-                          )}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ color: '#444', fontSize: '0.98rem', fontWeight: 400 }}>{proj.monthYear}</div>
-                  </div>
-                  <ul style={{ listStyle: 'disc', marginLeft: '0.7em', color: '#222', fontSize: '1.01rem', marginTop: 0, marginBottom: 0 }}>
-                    {proj.description &&
-                      proj.description.map(
-                        (desc, dIdx) =>
-                          desc && (
-                            <li key={dIdx} style={{ marginBottom: '0.15em' }}>
-                              {desc}
-                            </li>
-                          )
-                      )}
-                  </ul>
-                </div>
-              ))}
             </div>
           )}
 
-
-          {resume.certifications.length > 0 && (
-            <div style={{ pageBreakInside: 'avoid' }}>
-              <div style={sectionHeader}>CERTIFICATIONS</div>
-              <ul style={bulletList}>
-                {resume.certifications.flatMap((cert, idx) =>
-                  cert.name.split(',').map((item, i) => (
-                    <li key={idx + '-' + i} style={bullet}>
-                      {item.trim()}
-                    </li>
-                  ))
+          {/* ============ PROFESSIONAL BLUE TEMPLATE ============ */}
+          {selectedTemplate === 'professional' && (
+            <div style={{ fontFamily: 'Arial, sans-serif' }}>
+              {/* Header with Photo */}
+              <div style={{ background: '#0066cc', color: '#fff', padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                {photoUrl ? (
+                  <img src={photoUrl} alt="Profile" style={{ width: '90px', height: '90px', borderRadius: '4px', objectFit: 'cover', border: '3px solid #fff' }} />
+                ) : (
+                  <div style={{ width: '90px', height: '90px', borderRadius: '4px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>👤</div>
                 )}
-              </ul>
+                <div style={{ flex: 1 }}>
+                  <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, textTransform: 'uppercase' }}>{resume.personalInfo.name || 'YOUR NAME'}</h1>
+                  <div style={{ fontSize: '1.1rem', marginTop: '0.3rem', fontWeight: 500 }}>{resume.experience[0]?.role || 'Professional Title'}</div>
+                  <div style={{ fontSize: '0.9rem', marginTop: '0.5rem', opacity: 0.95 }}>
+                    {resume.personalInfo.phone && <span>📞 {resume.personalInfo.phone}</span>}
+                    {resume.personalInfo.email && <span style={{ marginLeft: '1rem' }}>✉️ {resume.personalInfo.email}</span>}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', marginTop: '0.3rem', opacity: 0.9 }}>
+                    {resume.personalInfo.links.map((l, idx) => (
+                      <a key={idx} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', marginRight: '1rem' }}>🔗 {l.label}</a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Two Column Layout */}
+              <div style={{ display: 'flex' }}>
+                {/* Left Sidebar */}
+                <div style={{ width: '35%', background: '#f0f7ff', padding: '1.5rem', borderRight: '1px solid #cce0ff' }}>
+                  {resume.summary && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>PROFILE</div><div style={{ fontSize: '0.95rem', color: '#333', lineHeight: 1.5 }}>{resume.summary}</div></div>}
+                  {skillsGroups.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>SKILLS</div><div style={{ fontSize: '0.9rem' }}>{skillsGroups.map((g, i) => <div key={i} style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#0066cc' }}>{g.name}</strong><br/>{g.skills.join(' • ')}</div>)}</div></div>}
+                  {resume.education.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>EDUCATION</div>{resume.education.map((ed, idx) => (<div key={idx} style={{ marginBottom: '0.8rem', fontSize: '0.9rem' }}><div style={{ fontWeight: 600, color: '#0066cc' }}>{ed.institution}</div><div>{ed.degree}{ed.branch && ` in ${ed.branch}`}</div><div style={{ color: '#666', fontSize: '0.85rem' }}>{ed.duration}{ed.cgpa && ` | CGPA: ${ed.cgpa}`}</div></div>))}</div>}
+                  {resume.certifications.length > 0 && <div><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>CERTIFICATIONS</div><ul style={{ ...bulletList, fontSize: '0.9rem' }}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
+                </div>
+                {/* Right Content */}
+                <div style={{ flex: 1, padding: '1.5rem' }}>
+                  {resume.experience.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>EXPERIENCE</div>{resume.experience.map((exp, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600, color: '#0066cc' }}>{exp.role}</span><span style={{ color: '#666', fontSize: '0.9rem' }}>{exp.duration}</span></div><div style={{ fontWeight: 500, color: '#333' }}>{exp.company}</div><ul style={bulletList}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                  {normalizedProjects.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 600, color: '#0066cc' }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', color: '#666', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#666', fontSize: '0.9rem' }}>{proj.monthYear}</span></div><ul style={bulletList}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                  {resume.achievements.length > 0 && <div><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>ACHIEVEMENTS</div><ul style={bulletList}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
+                </div>
+              </div>
             </div>
           )}
 
-          {resume.achievements.length > 0 && (
-            <div style={{ pageBreakInside: 'avoid' }}>
-              <div style={sectionHeader}>ACHIEVEMENTS</div>
-              <ul style={bulletList}>
-                {resume.achievements.map((ach, idx) =>
-                  (ach.point || []).map(
-                    (d, i) => d && <li key={i} style={bullet}>{d}</li>
-                  )
-                )}
-              </ul>
+          {/* ============ MODERN MINIMAL TEMPLATE ============ */}
+          {selectedTemplate === 'modern' && (
+            <div style={{ fontFamily: "'Helvetica Neue', sans-serif" }}>
+              {/* Header */}
+              <div style={{ padding: '2.5rem 2.5rem 1.5rem', borderBottom: '1px solid #2563eb' }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 300, margin: 0, color: '#111', letterSpacing: '1px' }}>{resume.personalInfo.name || 'Your Name'}</h1>
+                <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.7rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  {resume.personalInfo.phone && <span>{resume.personalInfo.phone}</span>}
+                  {resume.personalInfo.email && <span>{resume.personalInfo.email}</span>}
+                  {resume.personalInfo.links.map((l, idx) => (
+                    <a key={idx} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>{l.label}</a>
+                  ))}
+                </div>
+              </div>
+              {/* Content */}
+              <div style={{ padding: '1.5rem 2.5rem 2rem' }}>
+                {resume.summary && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>PROFILE</div><div style={{ color: '#444', fontSize: '0.95rem', lineHeight: 1.6 }}>{resume.summary}</div></div>}
+                {resume.education.length > 0 && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>EDUCATION</div>{resume.education.map((ed, idx) => (<div key={idx} style={{ marginBottom: '0.7em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 500 }}>{ed.institution}{ed.location && `, ${ed.location}`}</span><span style={{ color: '#888', fontSize: '0.9rem' }}>{ed.duration}</span></div><div style={{ color: '#666' }}>{ed.degree}{ed.branch && ` in ${ed.branch}`}{ed.cgpa && ` — CGPA: ${ed.cgpa}`}</div></div>))}</div>}
+                {skillsGroups.length > 0 && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>SKILLS</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>{skillsGroups.map((g, i) => <div key={i}><span style={{ color: '#2563eb', fontWeight: 500 }}>{g.name}:</span> <span style={{ color: '#444' }}>{g.skills.join(', ')}</span></div>)}</div></div>}
+                {resume.experience.length > 0 && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>EXPERIENCE</div>{resume.experience.map((exp, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 500 }}>{exp.role}</span><span style={{ color: '#888', fontSize: '0.9rem' }}>{exp.duration}</span></div><div style={{ color: '#666', marginBottom: '0.3rem' }}>{exp.company}</div><ul style={{ ...bulletList, color: '#444' }}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {normalizedProjects.length > 0 && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 500 }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ color: '#888', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#888', fontSize: '0.9rem' }}>{proj.monthYear}</span></div><ul style={{ ...bulletList, color: '#444' }}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {resume.certifications.length > 0 && <div style={{ marginBottom: '1.5rem' }}><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>CERTIFICATIONS</div><ul style={{ ...bulletList, color: '#444' }}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
+                {resume.achievements.length > 0 && <div><div style={{ ...sectionHeader, color: '#2563eb', borderColor: '#2563eb', fontWeight: 400, letterSpacing: '2px' }}>ACHIEVEMENTS</div><ul style={{ ...bulletList, color: '#444' }}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
+              </div>
             </div>
           )}
-          {/* Hobbies */}
-          {resume.hobbies.length > 0 && <div><div style={sectionHeader}>HOBBIES</div>
-            <ul style={bulletList}>
-              {resume.hobbies.map((hob, idx) => (hob.point || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>))}
-            </ul>
-          </div>}
-          {/* Custom Sections */}
-          {resume.customSections.length > 0 && resume.customSections.map((section, idx) => (
-            <div key={idx}><div style={sectionHeader}>{section.title.toUpperCase()}</div>
-              <ul style={bulletList}>
-                {section.items && section.items.map((item, i) => <li key={i} style={bullet}>{item}</li>)}
-              </ul>
+
+          {/* ============ EXECUTIVE TEMPLATE ============ */}
+          {selectedTemplate === 'executive' && (
+            <div style={{ fontFamily: "'Times New Roman', serif" }}>
+              {/* Header */}
+              <div style={{ display: 'flex', background: '#f8f9fa', borderBottom: '4px solid #1e3a5f' }}>
+                <div style={{ flex: 1, padding: '1.5rem 2rem' }}>
+                  <h1 style={{ fontSize: '1.7rem', color: '#1e3a5f', fontWeight: 700, margin: 0 }}>{resume.personalInfo.name || 'YOUR NAME'}</h1>
+                  <div style={{ color: '#1e3a5f', fontSize: '1.1rem', marginTop: '0.3rem', fontStyle: 'italic' }}>{resume.experience[0]?.role || 'Professional Title'}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
+                    {resume.personalInfo.phone && <span>📞 {resume.personalInfo.phone}</span>}
+                    {resume.personalInfo.email && <span style={{ marginLeft: '1rem' }}>✉️ {resume.personalInfo.email}</span>}
+                  </div>
+                </div>
+                {photoUrl && (
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '1rem 2rem' }}>
+                    <img src={photoUrl} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #1e3a5f' }} />
+                  </div>
+                )}
+              </div>
+              {/* Content */}
+              <div style={{ padding: '1.5rem 2rem' }}>
+                {resume.summary && <div style={{ marginBottom: '1.2rem', background: '#f8f9fa', padding: '1rem', borderLeft: '4px solid #1e3a5f' }}><div style={{ color: '#333', fontSize: '1rem', lineHeight: 1.6, fontStyle: 'italic' }}>{resume.summary}</div></div>}
+                {resume.education.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>EDUCATION</div>{resume.education.map((ed, idx) => (<div key={idx} style={{ marginBottom: '0.7em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600, color: '#1e3a5f' }}>{ed.institution}{ed.location && `, ${ed.location}`}</span><span style={{ color: '#666' }}>{ed.duration}</span></div><div style={{ color: '#444' }}>{ed.degree}{ed.branch && ` in ${ed.branch}`}{ed.cgpa && ` | CGPA: ${ed.cgpa}`}</div></div>))}</div>}
+                {skillsGroups.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>SKILLS</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{skillsGroups.map((g, i) => <div key={i} style={{ background: '#f0f4f8', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.9rem' }}><strong style={{ color: '#1e3a5f' }}>{g.name}:</strong> {g.skills.join(', ')}</div>)}</div></div>}
+                {resume.experience.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>EXPERIENCE</div>{resume.experience.map((exp, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600, color: '#1e3a5f' }}>{exp.role}</span><span style={{ color: '#666' }}>{exp.duration}</span></div><div style={{ fontWeight: 500, color: '#444', fontStyle: 'italic' }}>{exp.company}</div><ul style={bulletList}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {normalizedProjects.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 600, color: '#1e3a5f' }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', color: '#666', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#1e3a5f', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#666' }}>{proj.monthYear}</span></div><ul style={bulletList}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
+                {resume.certifications.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>CERTIFICATIONS</div><ul style={bulletList}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
+                {resume.achievements.length > 0 && <div><div style={{ ...sectionHeader, color: '#1e3a5f', borderColor: '#1e3a5f' }}>ACHIEVEMENTS</div><ul style={bulletList}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
+              </div>
             </div>
-          ))}
+          )}
+
         </div>
       </div>
+    </div>
     </div>
   );
 }
