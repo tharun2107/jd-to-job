@@ -44,7 +44,12 @@ import {
   Loader2,
   Camera,
   CameraOff,
-  Video
+  Video,
+  History,
+  ArrowLeft,
+  Eye,
+  Calendar,
+  Award
 } from 'lucide-react';
 
 console.log('Lucide icons:', { Mic, MicOff, Play, CheckCircle, Clock, Brain, TrendingUp, AlertCircle, Loader2 });
@@ -67,6 +72,12 @@ const MockInterview = () => {
   const [error, setError] = useState(null);
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
+  
+  // History states
+  const [showHistory, setShowHistory] = useState(false);
+  const [interviewHistory, setInterviewHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedPastInterview, setSelectedPastInterview] = useState(null);
 
   const recognitionRef = useRef(null);
   const timerRef = useRef(null);
@@ -89,6 +100,40 @@ const MockInterview = () => {
     };
     fetchJDs();
   }, []);
+
+  // Fetch interview history
+  const fetchInterviewHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const token = getToken();
+      const res = await axios.get('http://localhost:5001/api/mockinterview/history', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInterviewHistory(res.data.interviews || []);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+      setError('Failed to load interview history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Fetch specific interview details
+  const fetchInterviewDetails = async (interviewId) => {
+    setLoadingHistory(true);
+    try {
+      const token = getToken();
+      const res = await axios.get(`http://localhost:5001/api/mockinterview/result/${interviewId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedPastInterview(res.data.interview);
+    } catch (err) {
+      console.error('Error fetching interview details:', err);
+      setError('Failed to load interview details');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Timer
   useEffect(() => {
@@ -343,13 +388,32 @@ const MockInterview = () => {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-950 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-4">
-            AI Mock Interview
-          </h1>
-          <p className="text-gray-400">
-            Practice with AI-powered interviews tailored to your job description
-          </p>
+        <div className="mb-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-4">
+              AI Mock Interview
+            </h1>
+            <p className="text-gray-400">
+              Practice with AI-powered interviews tailored to your job description
+            </p>
+          </div>
+          
+          {/* History Toggle Button */}
+          {interviewStatus === 'not-started' && !showHistory && (
+            <div className="flex justify-center mt-6">
+              <Button
+                onClick={() => {
+                  setShowHistory(true);
+                  fetchInterviewHistory();
+                }}
+                variant="outline"
+                className="border-purple-600 text-purple-300 hover:bg-purple-900/20"
+              >
+                <History className="mr-2 h-4 w-4" />
+                View Past Interviews
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Error Display */}
@@ -365,8 +429,225 @@ const MockInterview = () => {
           </div>
         )}
 
+        {/* History View */}
+        {showHistory && !selectedPastInterview && (
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <History className="h-6 w-6 text-purple-400" />
+                Interview History
+              </h2>
+              <Button
+                onClick={() => setShowHistory(false)}
+                variant="outline"
+                className="border-gray-600 text-gray-300"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to New Interview
+              </Button>
+            </div>
+
+            {loadingHistory ? (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-400">Loading history...</p>
+              </div>
+            ) : interviewHistory.length === 0 ? (
+              <Card className="bg-gray-900/80 border-gray-700">
+                <CardContent className="py-12 text-center">
+                  <History className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 text-lg">No past interviews found</p>
+                  <p className="text-gray-500 text-sm mt-2">Complete your first interview to see it here</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {interviewHistory.map((item) => (
+                  <Card 
+                    key={item.id} 
+                    className="bg-gray-900/80 border-gray-700 hover:border-purple-500/50 transition-all cursor-pointer"
+                    onClick={() => fetchInterviewDetails(item.id)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge className={`${
+                              item.status === 'completed' ? 'bg-green-600' : 'bg-yellow-600'
+                            }`}>
+                              {item.status === 'completed' ? 'Completed' : 'In Progress'}
+                            </Badge>
+                            {item.attemptNumber && (
+                              <span className="text-gray-400 text-sm">
+                                Attempt #{item.attemptNumber}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-300 text-sm line-clamp-2 mb-2">
+                            {item.jdPreview || 'Job Description'}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
+                            {item.duration && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                {item.duration} min
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          {item.score !== undefined && item.score !== null && (
+                            <div className="mb-2">
+                              <div className="text-3xl font-bold text-blue-400">{item.score}</div>
+                              <div className="text-gray-500 text-xs">Score</div>
+                            </div>
+                          )}
+                          <Button size="sm" variant="outline" className="border-purple-600 text-purple-300">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Past Interview Details View */}
+        {showHistory && selectedPastInterview && (
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Award className="h-6 w-6 text-yellow-400" />
+                Interview Feedback
+              </h2>
+              <Button
+                onClick={() => setSelectedPastInterview(null)}
+                variant="outline"
+                className="border-gray-600 text-gray-300"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to History
+              </Button>
+            </div>
+
+            {/* Score Display */}
+            {selectedPastInterview.analysis && (
+              <Card className="bg-gray-900/80 border-blue-800 mb-6">
+                <CardContent className="p-6">
+                  <div className="text-center mb-6">
+                    <div className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                      {selectedPastInterview.analysis.overallScore || 0}/100
+                    </div>
+                    <p className="text-gray-400 mt-2">Overall Performance Score</p>
+                  </div>
+
+                  {/* Strengths */}
+                  {selectedPastInterview.analysis.strengths && selectedPastInterview.analysis.strengths.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-green-400 mb-2 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5" />
+                        Strengths
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPastInterview.analysis.strengths.map((s, idx) => (
+                          <Badge key={idx} className="bg-green-600 text-white">{s}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Weaknesses */}
+                  {selectedPastInterview.analysis.weaknesses && selectedPastInterview.analysis.weaknesses.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-yellow-400 mb-2 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" />
+                        Areas to Improve
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPastInterview.analysis.weaknesses.map((w, idx) => (
+                          <Badge key={idx} className="bg-yellow-600 text-white">{w}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Feedback */}
+                  {selectedPastInterview.analysis.detailedFeedback && (
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-blue-300 mb-2">Detailed Feedback</h3>
+                      <div className="bg-gray-800/50 rounded-lg p-4">
+                        <p className="text-gray-300 whitespace-pre-wrap">
+                          {selectedPastInterview.analysis.detailedFeedback}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {selectedPastInterview.analysis.recommendations && selectedPastInterview.analysis.recommendations.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-purple-400 mb-2">Recommendations</h3>
+                      <ul className="list-disc list-inside space-y-1 text-gray-300">
+                        {selectedPastInterview.analysis.recommendations.map((rec, idx) => (
+                          <li key={idx}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Questions & Responses */}
+            {selectedPastInterview.questions && selectedPastInterview.questions.length > 0 && (
+              <Card className="bg-gray-900/80 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-blue-300">Questions & Your Responses</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedPastInterview.questions.map((q, idx) => (
+                    <div key={idx} className="bg-gray-800/50 rounded-lg p-4">
+                      <div className="flex items-start gap-3 mb-2">
+                        <Badge className="bg-blue-600">Q{idx + 1}</Badge>
+                        <p className="text-white font-medium">{q.question}</p>
+                      </div>
+                      <div className="ml-10 mt-2">
+                        <p className="text-gray-400 text-sm mb-1">Your Response:</p>
+                        <p className="text-gray-300 text-sm bg-gray-900/50 rounded p-2">
+                          {selectedPastInterview.responses?.[idx]?.transcript || 'No response recorded'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Back Button */}
+            <div className="mt-6 text-center">
+              <Button
+                onClick={() => {
+                  setSelectedPastInterview(null);
+                  setShowHistory(false);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Start New Interview
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Setup Section */}
-        {interviewStatus === 'not-started' && (
+        {interviewStatus === 'not-started' && !showHistory && (
           <div className="max-w-2xl mx-auto">
             <Card className="bg-gray-900/80 border-blue-800">
               <CardHeader>

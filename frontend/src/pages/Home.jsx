@@ -211,10 +211,7 @@ const Home = () => {
                     Get Started Free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="lg" className="text-base px-8 py-6 border-white text-white hover:bg-white hover:text-black">
-                    <Play className="mr-2 h-4 w-4" />
-                    Watch Demo
-                  </Button>
+                 
                 </motion.div>
               </motion.div>
             </AnimatePresence>
@@ -464,9 +461,7 @@ const Home = () => {
                 Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8 py-6 border-white text-white hover:bg-white hover:text-black">
-                Schedule Demo
-              </Button>
+             
             </div>
           </motion.div>
         </div>

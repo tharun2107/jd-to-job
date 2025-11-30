@@ -91,32 +91,38 @@ const Navbar = () => {
     {
       title: "AI-Powered Analysis",
       description: "Advanced resume parsing with intelligent skill matching",
-      icon: <Rocket className="h-5 w-5" />
+      icon: <Rocket className="h-5 w-5" />,
+      href: "/ats-analysis"
     },
     {
       title: "Smart Matching",
       description: "Precise job-description analysis with recommendations",
-      icon: <Target className="h-5 w-5" />
+      icon: <Target className="h-5 w-5" />,
+      href: "/resume-upload"
     },
     {
       title: "Mock Assessments",
       description: "AI-generated tests with detailed feedback",
-      icon: <Zap className="h-5 w-5" />
+      icon: <Zap className="h-5 w-5" />,
+      href: "/mock-test"
     },
     {
       title: "Performance Tracking",
       description: "Comprehensive analytics for career growth",
-      icon: <TrendingUp className="h-5 w-5" />
+      icon: <TrendingUp className="h-5 w-5" />,
+      href: "/dashboard"
     },
     {
       title: "Learning Resources",
       description: "Curated educational content and materials",
-      icon: <Globe className="h-5 w-5" />
+      icon: <Globe className="h-5 w-5" />,
+      href: "/resources"
     },
     {
-      title: "Secure & Private",
-      description: "Enterprise-grade security with data privacy",
-      icon: <Shield className="h-5 w-5" />
+      title: "Mock Interview",
+      description: "Practice interviews with AI feedback",
+      icon: <Shield className="h-5 w-5" />,
+      href: "/mock-interview"
     }
   ];
 
@@ -163,8 +169,9 @@ const Navbar = () => {
                   <NavigationMenuContent>
                     <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                       {features.map((feature, index) => (
-                        <div
+                        <Link
                           key={index}
+                          to={feature.href}
                           className="group relative flex cursor-pointer select-none items-center rounded-md p-3 text-sm leading-none no-underline outline-none transition-colors hover:bg-gray-800 hover:text-white"
                         >
                           <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white">
@@ -178,7 +185,7 @@ const Navbar = () => {
                               {feature.description}
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </NavigationMenuContent>
