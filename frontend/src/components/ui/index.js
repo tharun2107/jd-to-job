@@ -1,4 +1,4 @@
-export { Button } from './button';
+export { Button } from './Button';
 export { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 export { Badge } from './badge';
 export { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './accordion';
@@ -31,4 +31,5 @@ export {
 export { Input } from './input';
 export { Textarea } from './textarea';
 export { Label } from './label';
-export { Separator } from './separator'; 
+export { Separator } from './separator';
+export { Progress } from './progress'; 

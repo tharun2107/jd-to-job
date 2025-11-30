@@ -45,6 +45,7 @@ import AtsAnalysis from './pages/AtsAnalysis';
 import Resources from './pages/Resources';
 import ResumeBuilder from './pages/ResumeBuilder';
 import MockTest from './pages/MockTest';
+import MockInterview from './pages/MockInterview';
 // import other pages as needed
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
         <Route path="/resources" element={<Resources />} />
         <Route path="/resume-builder" element={<ResumeBuilder />} />
         <Route path="/mock-test" element={<MockTest />} />
+        <Route path="/mock-interview" element={<MockInterview />} />
         {/* Add other routes here */}
       </Routes>
     </>

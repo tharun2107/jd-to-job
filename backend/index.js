@@ -21,6 +21,7 @@ const authRoutes = require("./routes/auth");
 const analyzeRoutes = require("./routes/analyzeRoute"); // Ensure this route is defined
 const resourcesRoute = require('./routes/resources');
 const mockTestRoute = require('./routes/mockTest');
+const mockInterviewRoute = require('./routes/mockInterview');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/auth", authRoutes);
 app.use("/api", analyzeRoutes); // Use the analyze route
 app.use('/api/resources', resourcesRoute);
 app.use('/api/mocktest', mockTestRoute);
+app.use('/api/mockinterview', mockInterviewRoute);
 
 app.get("/", (req, res) => {
   res.send("🚀 Backend Running...");

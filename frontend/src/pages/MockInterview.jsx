@@ -1,0 +1,574 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+// Debug imports - log each one
+import * as CardComponents from '../components/ui/card';
+import * as ButtonComponents from '../components/ui/Button';
+import * as ProgressComponents from '../components/ui/progress';
+import * as BadgeComponents from '../components/ui/badge';
+
+console.log('Card imports:', CardComponents);
+console.log('Button imports:', ButtonComponents);
+console.log('Progress imports:', ProgressComponents);
+console.log('Badge imports:', BadgeComponents);
+
+// Extract components with fallbacks
+const Card = CardComponents.Card;
+const CardContent = CardComponents.CardContent;
+const CardHeader = CardComponents.CardHeader;
+const CardTitle = CardComponents.CardTitle;
+const Button = ButtonComponents.Button;
+const Progress = ProgressComponents.Progress;
+const Badge = BadgeComponents.Badge;
+
+// Verify all components
+console.log('Card:', Card);
+console.log('CardContent:', CardContent);
+console.log('CardHeader:', CardHeader);
+console.log('CardTitle:', CardTitle);
+console.log('Button:', Button);
+console.log('Progress:', Progress);
+console.log('Badge:', Badge);
+
+// Icons from lucide-react
+import {
+  Mic,
+  MicOff,
+  Play,
+  CheckCircle,
+  Clock,
+  Brain,
+  TrendingUp,
+  AlertCircle,
+  Loader2
+} from 'lucide-react';
+
+console.log('Lucide icons:', { Mic, MicOff, Play, CheckCircle, Clock, Brain, TrendingUp, AlertCircle, Loader2 });
+
+const getToken = () => localStorage.getItem('token');
+
+const MockInterview = () => {
+  const navigate = useNavigate();
+  const [jds, setJds] = useState([]);
+  const [selectedJd, setSelectedJd] = useState(null);
+  const [interview, setInterview] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [responses, setResponses] = useState([]);
+  const [interviewStatus, setInterviewStatus] = useState('not-started');
+  const [timeRemaining, setTimeRemaining] = useState(30 * 60);
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const recognitionRef = useRef(null);
+  const timerRef = useRef(null);
+  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
+
+  // Load JDs
+  useEffect(() => {
+    const fetchJDs = async () => {
+      try {
+        const token = getToken();
+        const res = await axios.get('http://localhost:5001/api/jds', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setJds(res.data);
+      } catch (err) {
+        console.error('Error fetching JDs:', err);
+        setError('Failed to load job descriptions');
+      }
+    };
+    fetchJDs();
+  }, []);
+
+  // Timer
+  useEffect(() => {
+    if (interviewStatus === 'in-progress' && timeRemaining > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            handleCompleteInterview();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [interviewStatus, timeRemaining]);
+
+  // Speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          }
+        }
+        if (finalTranscript) {
+          setTranscript(prev => prev + finalTranscript);
+        }
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+    }
+  }, []);
+
+  // Start interview
+  const handleStartInterview = async () => {
+    if (!selectedJd) {
+      setError('Please select a job description');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getToken();
+      const res = await axios.post(
+        'http://localhost:5001/api/mockinterview/create',
+        { jdId: selectedJd._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log('Interview response:', res.data);
+      
+      if (!res.data || !res.data.interview) {
+        throw new Error('Invalid response from server');
+      }
+      if (!res.data.interview.questions || !Array.isArray(res.data.interview.questions) || res.data.interview.questions.length === 0) {
+        throw new Error('No questions in interview response');
+      }
+      
+      setInterview(res.data.interview);
+      setInterviewStatus('in-progress');
+      setCurrentQuestionIndex(0);
+      setTimeRemaining(30 * 60);
+    } catch (err) {
+      console.error('Error starting interview:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to start interview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Speak question
+  const speakQuestion = (question) => {
+    if (!synthRef.current || !question) return;
+    if (synthRef.current.speaking) {
+      synthRef.current.cancel();
+    }
+    const utterance = new SpeechSynthesisUtterance(question);
+    utterance.rate = 0.9;
+    synthRef.current.speak(utterance);
+  };
+
+  // Start/Stop recording
+  const toggleRecording = () => {
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      if (recognitionRef.current) {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } else {
+        setError('Speech recognition not available');
+      }
+    }
+  };
+
+  // Submit response
+  const handleSubmitResponse = async () => {
+    if (!transcript.trim()) {
+      setError('Please provide a response');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getToken();
+      await axios.post(
+        'http://localhost:5001/api/mockinterview/submit-response',
+        {
+          interviewId: interview.id,
+          questionIndex: currentQuestionIndex,
+          transcript: transcript
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const newResponses = [...responses];
+      newResponses[currentQuestionIndex] = transcript;
+      setResponses(newResponses);
+
+      if (currentQuestionIndex < interview.questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setTranscript('');
+      } else {
+        handleCompleteInterview();
+      }
+    } catch (err) {
+      console.error('Error submitting response:', err);
+      setError('Failed to submit response');
+    } finally {
+      setLoading(false);
+      if (isRecording) toggleRecording();
+    }
+  };
+
+  // Complete interview
+  const handleCompleteInterview = async () => {
+    setLoading(true);
+    if (isRecording) toggleRecording();
+    
+    try {
+      const token = getToken();
+      const res = await axios.post(
+        'http://localhost:5001/api/mockinterview/complete',
+        { interviewId: interview.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setAnalysis(res.data.analysis);
+      setInterviewStatus('completed');
+    } catch (err) {
+      console.error('Error completing interview:', err);
+      setError('Failed to complete interview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const currentQuestion = interview?.questions?.[currentQuestionIndex];
+
+  // Check for undefined components before rendering
+  if (!Card || !CardContent || !CardHeader || !CardTitle || !Button || !Progress || !Badge) {
+    return (
+      <div style={{ padding: '20px', color: 'white', background: '#1a1a2e', minHeight: '100vh' }}>
+        <h1>Component Loading Error</h1>
+        <p>Some UI components failed to load:</p>
+        <ul>
+          <li>Card: {Card ? '✅' : '❌'}</li>
+          <li>CardContent: {CardContent ? '✅' : '❌'}</li>
+          <li>CardHeader: {CardHeader ? '✅' : '❌'}</li>
+          <li>CardTitle: {CardTitle ? '✅' : '❌'}</li>
+          <li>Button: {Button ? '✅' : '❌'}</li>
+          <li>Progress: {Progress ? '✅' : '❌'}</li>
+          <li>Badge: {Badge ? '✅' : '❌'}</li>
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-950 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-4">
+            AI Mock Interview
+          </h1>
+          <p className="text-gray-400">
+            Practice with AI-powered interviews tailored to your job description
+          </p>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-6 p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
+            {error}
+            <button 
+              onClick={() => setError(null)} 
+              className="ml-4 text-red-400 hover:text-red-200"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Setup Section */}
+        {interviewStatus === 'not-started' && (
+          <div className="max-w-2xl mx-auto">
+            <Card className="bg-gray-900/80 border-blue-800">
+              <CardHeader>
+                <CardTitle className="text-blue-300">Select Job Description</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {jds.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">
+                    No job descriptions found. Please upload a resume first.
+                  </p>
+                ) : (
+                  <React.Fragment>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {jds.map((jd) => (
+                        <div
+                          key={jd._id}
+                          onClick={() => setSelectedJd(jd)}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                            selectedJd?._id === jd._id
+                              ? 'border-blue-500 bg-blue-900/20'
+                              : 'border-gray-700 hover:border-gray-600'
+                          }`}
+                        >
+                          <p className="text-white text-sm line-clamp-2">
+                            {jd.jdText ? jd.jdText.substring(0, 200) + '...' : 'No description'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      onClick={handleStartInterview}
+                      disabled={!selectedJd || loading}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {loading ? (
+                        <React.Fragment>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Starting...
+                        </React.Fragment>
+                      ) : (
+                        'Start Interview'
+                      )}
+                    </Button>
+                  </React.Fragment>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Interview Section */}
+        {interviewStatus === 'in-progress' && interview && interview.questions && interview.questions.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* AI Interviewer Panel */}
+            <div className="lg:col-span-1">
+              <Card className="bg-gray-900/80 border-blue-800 h-full">
+                <CardHeader>
+                  <CardTitle className="text-blue-300 flex items-center justify-between">
+                    <span>AI Interviewer</span>
+                    <Badge className="bg-green-600">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatTime(timeRemaining)}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 w-full bg-gray-800 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">👤</div>
+                      <p className="text-gray-400">AI Interviewer</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <p className="text-gray-400 text-sm">
+                      Question {currentQuestionIndex + 1} of {interview.questions.length}
+                    </p>
+                    <Progress
+                      value={((currentQuestionIndex + 1) / interview.questions.length) * 100}
+                      className="mt-2"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Question & Response Panel */}
+            <div className="lg:col-span-2 space-y-4">
+              <Card className="bg-gray-900/80 border-blue-800">
+                <CardHeader>
+                  <CardTitle className="text-blue-300 flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    Interview Question
+                    {currentQuestion && (
+                      <Badge className="ml-auto">
+                        {currentQuestion.type || 'technical'}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-white text-lg">
+                      {currentQuestion?.question || 'Loading question...'}
+                    </p>
+                  </div>
+
+                  {currentQuestion?.question && (
+                    <Button
+                      onClick={() => speakQuestion(currentQuestion.question)}
+                      variant="outline"
+                      className="border-blue-600 text-blue-300"
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Listen to Question
+                    </Button>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300">
+                      Your Response
+                    </label>
+                    <textarea
+                      value={transcript}
+                      onChange={(e) => setTranscript(e.target.value)}
+                      placeholder="Start speaking or type your answer here..."
+                      className="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={toggleRecording}
+                        className={`flex-1 ${
+                          isRecording
+                            ? 'bg-red-600 hover:bg-red-700'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        {isRecording ? (
+                          <React.Fragment>
+                            <MicOff className="mr-2 h-4 w-4" />
+                            Stop Recording
+                          </React.Fragment>
+                        ) : (
+                          <React.Fragment>
+                            <Mic className="mr-2 h-4 w-4" />
+                            Start Recording
+                          </React.Fragment>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={handleSubmitResponse}
+                        disabled={!transcript.trim() || loading}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        {loading ? (
+                          <React.Fragment>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </React.Fragment>
+                        ) : currentQuestionIndex < interview.questions.length - 1 ? (
+                          'Next Question'
+                        ) : (
+                          'Complete Interview'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Results Section */}
+        {interviewStatus === 'completed' && analysis && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Card className="bg-gray-900/80 border-blue-800">
+              <CardHeader>
+                <CardTitle className="text-blue-300 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Interview Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-center">
+                  <div className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                    {analysis.overallScore || 0}/100
+                  </div>
+                  <p className="text-gray-400 mt-2">Overall Performance Score</p>
+                </div>
+
+                {analysis.strengths && analysis.strengths.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      Strengths
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.strengths.map((strength, idx) => (
+                        <Badge key={idx} className="bg-green-600 text-white">
+                          {strength}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {analysis.weaknesses && analysis.weaknesses.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      Areas for Improvement
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.weaknesses.map((weakness, idx) => (
+                        <Badge key={idx} className="bg-yellow-600 text-white">
+                          {weakness}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {analysis.detailedFeedback && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-300 mb-3">Detailed Feedback</h3>
+                    <div className="bg-gray-800/50 rounded-lg p-4">
+                      <p className="text-gray-300 whitespace-pre-wrap">
+                        {analysis.detailedFeedback}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={() => {
+                      setInterviewStatus('not-started');
+                      setInterview(null);
+                      setAnalysis(null);
+                      setCurrentQuestionIndex(0);
+                      setResponses([]);
+                      setTranscript('');
+                    }}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Start New Interview
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MockInterview;

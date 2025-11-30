@@ -1,3 +1,970 @@
+// import React, { useState, useEffect } from 'react';
+// import axios from 'axios';
+// import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+// import { Button } from '../components/ui/button';
+// import { Badge } from '../components/ui/badge';
+// import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+// import { Separator } from '../components/ui/separator';
+// import { Progress } from '../components/ui/progress';
+// import {
+//   Brain,
+//   Clock,
+//   FileText,
+//   CheckCircle,
+//   XCircle,
+//   ArrowLeft,
+//   ArrowRight,
+//   Play,
+//   History,
+//   Target,
+//   Award,
+//   Timer,
+//   BarChart3,
+//   Loader2,
+//   AlertCircle,
+//   Info,
+//   Settings,
+//   Eye,
+//   Trophy,
+//   TrendingUp
+// } from 'lucide-react';
+// import { motion, AnimatePresence } from 'framer-motion';
+
+// const MockTest = () => {
+//   const [currentView, setCurrentView] = useState('main'); // main, history, config, exam, results
+//   const [jds, setJds] = useState([]);
+//   const [selectedJd, setSelectedJd] = useState(null);
+//   const [loadingJds, setLoadingJds] = useState(false);
+//   const [jdError, setJdError] = useState(null);
+
+//   // Exam configuration states
+//   const [questionCount, setQuestionCount] = useState(15);
+//   const [loadingExam, setLoadingExam] = useState(false);
+//   const [examError, setExamError] = useState(null);
+
+//   // Exam states
+//   const [currentExam, setCurrentExam] = useState(null);
+//   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+//   const [userAnswers, setUserAnswers] = useState([]);
+//   const [timeLeft, setTimeLeft] = useState(0);
+//   const [examStarted, setExamStarted] = useState(false);
+
+//   // Assessment history states
+//   const [attempts, setAttempts] = useState([]);
+//   const [loadingAttempts, setLoadingAttempts] = useState(false);
+//   const [attemptsError, setAttemptsError] = useState(null);
+//   const [selectedAttempt, setSelectedAttempt] = useState(null);
+//   const [attemptDetails, setAttemptDetails] = useState(null);
+//   const [loadingDetails, setLoadingDetails] = useState(false);
+
+//   // Time limits for different question counts
+//   const TIME_LIMITS = {
+//     15: 20, // 20 minutes for 15 questions
+//     20: 30, // 30 minutes for 20 questions
+//     30: 45  // 45 minutes for 30 questions
+//   };
+
+//   useEffect(() => {
+//     if (currentView === 'main') {
+//       fetchJDs();
+//     }
+//     // eslint-disable-next-line
+//   }, [currentView]);
+
+//   // Timer effect for exam
+//   useEffect(() => {
+//     let timer;
+//     if (examStarted && timeLeft > 0) {
+//       timer = setInterval(() => {
+//         setTimeLeft(prev => {
+//           if (prev <= 1) {
+//             // Time's up - auto submit
+//             handleSubmitExam();
+//             return 0;
+//           }
+//           return prev - 1;
+//         });
+//       }, 1000);
+//     }
+//     return () => clearInterval(timer);
+//   }, [examStarted, timeLeft]);
+
+//   // Fetch attempts when entering history view
+//   useEffect(() => {
+//     if (currentView === 'history') {
+//       fetchAttempts();
+//     }
+//     // eslint-disable-next-line
+//   }, [currentView]);
+
+//   const fetchJDs = async () => {
+//     setLoadingJds(true);
+//     setJdError(null);
+//     setJds([]);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const response = await axios.get('http://localhost:5001/api/jds', {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+//       console.log('API Response:', response.data);
+//       const jdsArray = Array.isArray(response.data) ? response.data : [];
+//       console.log('JDs Array:', jdsArray);
+//       setJds(jdsArray);
+//     } catch (error) {
+//       console.error('Error fetching JDs:', error);
+//       setJdError('Failed to load job descriptions. Please login again.');
+//     } finally {
+//       setLoadingJds(false);
+//     }
+//   };
+
+//   const fetchAttempts = async () => {
+//     setLoadingAttempts(true);
+//     setAttemptsError(null);
+//     setAttempts([]);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const response = await axios.get('http://localhost:5001/api/mocktest/attempts', {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+//       setAttempts(Array.isArray(response.data.attempts) ? response.data.attempts : []);
+//     } catch (error) {
+//       setAttemptsError('Failed to load assessment attempts. Please login again.');
+//     } finally {
+//       setLoadingAttempts(false);
+//     }
+//   };
+
+//   const fetchAttemptDetails = async (attemptId) => {
+//     setLoadingDetails(true);
+//     setAttemptDetails(null);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const response = await axios.get(`http://localhost:5001/api/mocktest/result/${attemptId}`, {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+//       setAttemptDetails(response.data.mockTest);
+//     } catch (error) {
+//       setAttemptDetails(null);
+//       alert('Failed to load attempt details.');
+//     } finally {
+//       setLoadingDetails(false);
+//     }
+//   };
+
+//   const handleStartAssessment = () => {
+//     if (selectedJd) {
+//       setCurrentView('config');
+//     }
+//   };
+
+//   const handleCreateExam = async () => {
+//     if (!selectedJd) return;
+
+//     setLoadingExam(true);
+//     setExamError(null);
+
+//     try {
+//       const token = localStorage.getItem('token');
+//       const response = await axios.post('http://localhost:5001/api/mocktest/create', {
+//         jdId: selectedJd._id,
+//         numberOfQuestions: questionCount,
+//         timeLimit: TIME_LIMITS[questionCount]
+//       }, {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+
+//       console.log('Exam created:', response.data);
+
+//       // Set up the exam
+//       const examData = response.data.mockTest;
+//       setCurrentExam(examData);
+//       setUserAnswers(new Array(examData.questions.length).fill(null));
+//       setTimeLeft(TIME_LIMITS[questionCount] * 60); // Convert to seconds
+//       setCurrentQuestionIndex(0);
+//       setExamStarted(true);
+//       setCurrentView('exam');
+
+//     } catch (error) {
+//       console.error('Error creating exam:', error);
+//       setExamError(error.response?.data?.message || 'Failed to create assessment. Please try again.');
+//     } finally {
+//       setLoadingExam(false);
+//     }
+//   };
+
+//   const handleAnswerSelect = (selectedOption) => {
+//     const newAnswers = [...userAnswers];
+//     newAnswers[currentQuestionIndex] = selectedOption;
+//     setUserAnswers(newAnswers);
+//   };
+
+//   const handleNextQuestion = () => {
+//     if (currentQuestionIndex < currentExam.questions.length - 1) {
+//       setCurrentQuestionIndex(currentQuestionIndex + 1);
+//     }
+//   };
+
+//   const handlePreviousQuestion = () => {
+//     if (currentQuestionIndex > 0) {
+//       setCurrentQuestionIndex(currentQuestionIndex - 1);
+//     }
+//   };
+
+//   const handleSubmitExam = async () => {
+//     if (!currentExam) return;
+
+//     try {
+//       const token = localStorage.getItem('token');
+//       const response = await axios.post('http://localhost:5001/api/mocktest/submit', {
+//         mockTestId: currentExam.id,
+//         answers: userAnswers.map((answer, index) => ({
+//           questionIndex: index,
+//           selectedOption: answer || 0
+//         }))
+//       }, {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+
+//       console.log('Exam submitted:', response.data);
+//       setCurrentView('results');
+//       // You can store the results in state if needed
+
+//     } catch (error) {
+//       console.error('Error submitting exam:', error);
+//       alert('Failed to submit exam. Please try again.');
+//     }
+//   };
+
+//   const formatTime = (seconds) => {
+//     const mins = Math.floor(seconds / 60);
+//     const secs = seconds % 60;
+//     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+//   };
+
+//   console.log('Render - JDs:', jds, 'Selected JD:', selectedJd);
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-950">
+//       <div className="max-w-6xl mx-auto py-8 px-4">
+//         {/* Header */}
+//         <motion.div
+//           initial={{ opacity: 0, y: -20 }}
+//           animate={{ opacity: 1, y: 0 }}
+//           transition={{ duration: 0.6 }}
+//           className="text-center mb-8"
+//         >
+//           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center justify-center gap-3 mb-4">
+//             <Brain className="h-10 w-10" />
+//             Mock Assessment
+//           </h1>
+//           <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+//             Practice with AI-generated questions based on your job descriptions
+//           </p>
+//         </motion.div>
+
+//         {/* Navigation */}
+//         <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//           <div className="flex">
+//             <Button
+//               variant={currentView === 'main' ? 'default' : 'ghost'}
+//               onClick={() => setCurrentView('main')}
+//               className={`flex-1 rounded-none h-16 text-lg font-semibold ${currentView === 'main'
+//                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
+//                 : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+//                 }`}
+//             >
+//               <Play className="mr-2 h-5 w-5" />
+//               Take Assessment
+//             </Button>
+//             <Button
+//               variant={currentView === 'history' ? 'default' : 'ghost'}
+//               onClick={() => setCurrentView('history')}
+//               className={`flex-1 rounded-none h-16 text-lg font-semibold ${currentView === 'history'
+//                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
+//                 : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+//                 }`}
+//             >
+//               <History className="mr-2 h-5 w-5" />
+//               Assessment History
+//             </Button>
+//           </div>
+//         </Card>
+
+//         {/* Main Content */}
+//         <AnimatePresence mode="wait">
+//           {currentView === 'main' && (
+//             <motion.div
+//               key="main"
+//               initial={{ opacity: 0, x: -20 }}
+//               animate={{ opacity: 1, x: 0 }}
+//               exit={{ opacity: 0, x: 20 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               <div className="text-center mb-10">
+//                 <h2 className="text-3xl font-bold text-white mb-4">
+//                   Welcome to Your Assessment
+//                 </h2>
+//                 <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+//                   Select a job description and configure your assessment to start practicing with AI-generated questions.
+//                 </p>
+//               </div>
+
+//               {/* How it works */}
+//               <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//                 <CardHeader>
+//                   <CardTitle className="text-xl font-bold text-blue-300 flex items-center gap-3">
+//                     <Info className="h-6 w-6" />
+//                     How the Assessment Works
+//                   </CardTitle>
+//                 </CardHeader>
+//                 <CardContent>
+//                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+//                     {[
+//                       { step: '1', title: 'Select JD', desc: 'Choose from your existing job descriptions', icon: <FileText className="h-5 w-5" /> },
+//                       { step: '2', title: 'Configure Test', desc: 'Select number of questions (15, 20, or 30)', icon: <Settings className="h-5 w-5" /> },
+//                       { step: '3', title: 'Take Assessment', desc: 'Answer questions within the time limit', icon: <Timer className="h-5 w-5" /> },
+//                       { step: '4', title: 'Get Feedback', desc: 'Receive detailed feedback and explanations', icon: <Award className="h-5 w-5" /> }
+//                     ].map((item, index) => (
+//                       <motion.div
+//                         key={item.step}
+//                         initial={{ opacity: 0, y: 20 }}
+//                         animate={{ opacity: 1, y: 0 }}
+//                         transition={{ delay: index * 0.1 }}
+//                         className="text-center"
+//                       >
+//                         <Card className="bg-gray-800/50 border border-gray-700 hover:border-blue-600 transition-colors">
+//                           <CardContent className="pt-6">
+//                             <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4">
+//                               {item.icon}
+//                             </div>
+//                             <h4 className="text-lg font-semibold text-white mb-2">
+//                               {item.title}
+//                             </h4>
+//                             <p className="text-gray-400 text-sm">
+//                               {item.desc}
+//                             </p>
+//                           </CardContent>
+//                         </Card>
+//                       </motion.div>
+//                     ))}
+//                   </div>
+//                 </CardContent>
+//               </Card>
+
+//               {/* JD Selection */}
+//               <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//                 <CardHeader>
+//                   <CardTitle className="text-xl font-bold text-blue-300 flex items-center gap-3">
+//                     <Target className="h-6 w-6" />
+//                     Select Job Description
+//                   </CardTitle>
+//                 </CardHeader>
+//                 <CardContent>
+//                   {loadingJds ? (
+//                     <div className="flex items-center justify-center py-12">
+//                       <Loader2 className="h-8 w-8 animate-spin text-blue-400 mr-3" />
+//                       <span className="text-blue-200 text-lg">Loading job descriptions...</span>
+//                     </div>
+//                   ) : jdError ? (
+//                       <div className="bg-red-950/30 border border-red-700 rounded-lg p-4">
+//                         <div className="flex items-center gap-2 text-red-400">
+//                           <AlertCircle className="h-5 w-5" />
+//                           <span className="font-semibold">{jdError}</span>
+//                         </div>
+//                     </div>
+//                   ) : jds.length === 0 ? (
+//                         <div className="bg-blue-950/30 border border-blue-700 rounded-lg p-8 text-center">
+//                           <FileText className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+//                           <p className="text-blue-200 font-semibold mb-2">No job descriptions found</p>
+//                           <p className="text-blue-300 text-sm">
+//                         Upload a job description first to get started with assessments.
+//                       </p>
+//                     </div>
+//                   ) : (
+//                           <div className="space-y-4">
+//                       <select
+//                         value={selectedJd ? selectedJd._id : ''}
+//                         onChange={e => {
+//                           const jd = jds.find(j => j._id === e.target.value);
+//                           setSelectedJd(jd);
+//                         }}
+//                               className="w-full p-4 bg-gray-800 border border-blue-700 rounded-lg text-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"
+//                             >
+//                               <option value="" className="text-gray-400">
+//                                 -- Select a Job Description --
+//                               </option>
+//                               {jds.map(jd => (
+//                                 <option key={jd._id} value={jd._id} className="text-gray-200">
+//                                   {jd.jdText.slice(0, 80)}...
+//                                 </option>
+//                               ))}
+//                             </select>
+
+//                             {selectedJd && (
+//                         <div className="bg-blue-950/30 border border-blue-700 rounded-lg p-4">
+//                           <p className="text-blue-200 font-semibold">
+//                             Selected: {selectedJd.jdText.slice(0, 60)}...
+//                           </p>
+//                         </div>
+//                       )}
+//                     </div>
+//                   )}
+//                 </CardContent>
+//               </Card>
+
+//               {/* Start Test Button */}
+//               <div className="text-center">
+//                 <Button
+//                   onClick={handleStartAssessment}
+//                   disabled={!selectedJd}
+//                   size="lg"
+//                   className={`text-lg font-semibold px-8 py-4 ${selectedJd
+//                     ? 'bg-green-600 hover:bg-green-700 text-white'
+//                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+//                     }`}
+//                 >
+//                   <Play className="mr-2 h-5 w-5" />
+//                   {selectedJd ? 'Start Assessment' : 'Select a Job Description First'}
+//                 </Button>
+//               </div>
+//             </motion.div>
+//           )}
+
+//           {/* Exam Configuration View */}
+//           {currentView === 'config' && (
+//             <motion.div
+//               key="config"
+//               initial={{ opacity: 0, x: -20 }}
+//               animate={{ opacity: 1, x: 0 }}
+//               exit={{ opacity: 0, x: 20 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               <div className="text-center mb-10">
+//                 <h2 className="text-3xl font-bold text-white mb-4">
+//                   Configure Your Assessment
+//                 </h2>
+//                 <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+//                   Choose your assessment settings and review the details before starting.
+//                 </p>
+//               </div>
+
+//               {/* Selected JD Review */}
+//               <Card className="bg-blue-950/30 border border-blue-700 rounded-2xl shadow-2xl mb-8">
+//                 <CardHeader>
+//                   <CardTitle className="text-lg font-semibold text-blue-200">
+//                     Selected Job Description
+//                   </CardTitle>
+//                 </CardHeader>
+//                 <CardContent>
+//                   <p className="text-blue-300 leading-relaxed">
+//                     {selectedJd?.jdText.slice(0, 120)}...
+//                   </p>
+//                 </CardContent>
+//               </Card>
+
+//               {/* Question Count Selection */}
+//               <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//                 <CardHeader>
+//                   <CardTitle className="text-xl font-bold text-blue-300 flex items-center gap-3">
+//                     <Settings className="h-6 w-6" />
+//                     Assessment Configuration
+//                   </CardTitle>
+//                 </CardHeader>
+//                 <CardContent>
+//                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+//                     {[15, 20, 30].map(count => (
+//                       <motion.div
+//                         key={count}
+//                         whileHover={{ scale: 1.02 }}
+//                         whileTap={{ scale: 0.98 }}
+//                       >
+//                         <Card
+//                           className={`cursor-pointer transition-all duration-200 ${questionCount === count
+//                             ? 'bg-blue-600/20 border-blue-600'
+//                             : 'bg-gray-800/50 border-gray-700 hover:border-blue-600'
+//                             }`}
+//                           onClick={() => setQuestionCount(count)}
+//                         >
+//                           <CardContent className="pt-6 text-center">
+//                             <div className={`text-4xl font-bold mb-2 ${questionCount === count ? 'text-blue-400' : 'text-gray-400'
+//                               }`}>
+//                               {count}
+//                             </div>
+//                             <div className={`font-semibold mb-1 ${questionCount === count ? 'text-blue-300' : 'text-gray-300'
+//                               }`}>
+//                               Questions
+//                             </div>
+//                             <div className={`text-sm ${questionCount === count ? 'text-blue-400' : 'text-gray-500'
+//                               }`}>
+//                               {TIME_LIMITS[count]} minutes
+//                             </div>
+//                           </CardContent>
+//                         </Card>
+//                       </motion.div>
+//                     ))}
+//                   </div>
+
+//                   {/* Assessment Summary */}
+//                   <Card className="bg-gray-800/50 border border-gray-700">
+//                     <CardHeader>
+//                       <CardTitle className="text-lg font-semibold text-white">
+//                         Assessment Summary
+//                       </CardTitle>
+//                     </CardHeader>
+//                     <CardContent>
+//                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+//                         <div className="text-center">
+//                           <div className="text-gray-400 text-sm font-medium mb-1">Questions</div>
+//                           <div className="text-2xl font-bold text-white">{questionCount}</div>
+//                         </div>
+//                         <div className="text-center">
+//                           <div className="text-gray-400 text-sm font-medium mb-1">Time Limit</div>
+//                           <div className="text-2xl font-bold text-white">{TIME_LIMITS[questionCount]} min</div>
+//                         </div>
+//                         <div className="text-center">
+//                           <div className="text-gray-400 text-sm font-medium mb-1">Difficulty</div>
+//                           <div className="text-2xl font-bold text-white">Adaptive</div>
+//                         </div>
+//                       </div>
+//                     </CardContent>
+//                   </Card>
+//                 </CardContent>
+//               </Card>
+
+//               {/* Error Display */}
+//               {examError && (
+//                 <div className="bg-red-950/30 border border-red-700 rounded-lg p-4 mb-8">
+//                   <div className="flex items-center gap-2 text-red-400">
+//                     <AlertCircle className="h-5 w-5" />
+//                     <span className="font-semibold">{examError}</span>
+//                   </div>
+//                 </div>
+//               )}
+
+//               {/* Action Buttons */}
+//               <div className="flex gap-4 justify-center">
+//                 <Button
+//                   variant="outline"
+//                   onClick={() => setCurrentView('main')}
+//                   className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+//                 >
+//                   <ArrowLeft className="mr-2 h-4 w-4" />
+//                   Back
+//                 </Button>
+//                 <Button
+//                   onClick={handleCreateExam}
+//                   disabled={loadingExam}
+//                   className="bg-green-600 hover:bg-green-700 text-white"
+//                 >
+//                   {loadingExam ? (
+//                     <>
+//                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                       Creating Assessment...
+//                     </>
+//                   ) : (
+//                       <>
+//                         <Play className="mr-2 h-4 w-4" />
+//                         Start Assessment
+//                       </>
+//                   )}
+//                 </Button>
+//               </div>
+//             </motion.div>
+//           )}
+
+//           {/* Exam View */}
+//           {currentView === 'exam' && currentExam && (
+//             <motion.div
+//               key="exam"
+//               initial={{ opacity: 0, x: -20 }}
+//               animate={{ opacity: 1, x: 0 }}
+//               exit={{ opacity: 0, x: 20 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               {/* Exam Header */}
+//               <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//                 <CardContent className="p-6">
+//                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+//                     <div>
+//                       <h2 className="text-2xl font-bold text-white mb-2">
+//                         Question {currentQuestionIndex + 1} of {currentExam.questions.length}
+//                       </h2>
+//                       <p className="text-gray-300">
+//                         Skill: {currentExam.questions[currentQuestionIndex]?.skill}
+//                       </p>
+//                     </div>
+//                     <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-lg ${timeLeft < 300 ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+//                       }`}>
+//                       <Clock className="h-5 w-5" />
+//                       {formatTime(timeLeft)}
+//                     </div>
+//                   </div>
+
+//                   {/* Progress Bar */}
+//                   <div className="mt-4">
+//                     <div className="flex justify-between text-sm text-gray-400 mb-2">
+//                       <span>Progress</span>
+//                       <span>{Math.round(((currentQuestionIndex + 1) / currentExam.questions.length) * 100)}%</span>
+//                     </div>
+//                     <Progress
+//                       value={((currentQuestionIndex + 1) / currentExam.questions.length) * 100}
+//                       className="h-2"
+//                     />
+//                   </div>
+//                 </CardContent>
+//               </Card>
+
+//               {/* Question */}
+//               <Card className="bg-gray-900/80 border border-blue-800 rounded-2xl shadow-2xl mb-8">
+//                 <CardContent className="p-8">
+//                   <h3 className="text-xl font-semibold text-white mb-8 leading-relaxed">
+//                     {currentExam.questions[currentQuestionIndex]?.question}
+//                   </h3>
+
+//                   {/* Options */}
+//                   <div className="space-y-4">
+//                     {currentExam.questions[currentQuestionIndex]?.options.map((option, index) => (
+//                       <motion.button
+//                         key={index}
+//                         onClick={() => handleAnswerSelect(index)}
+//                         className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 ${userAnswers[currentQuestionIndex] === index
+//                           ? 'bg-blue-600 border-blue-600 text-white'
+//                           : 'bg-gray-800 border-gray-700 text-gray-200 hover:border-blue-600 hover:bg-gray-800/80'
+//                           }`}
+//                         whileHover={{ scale: 1.01 }}
+//                         whileTap={{ scale: 0.99 }}
+//                       >
+//                         <span className="font-bold mr-3">
+//                           {String.fromCharCode(65 + index)}.
+//                         </span>
+//                         {option}
+//                       </motion.button>
+//                     ))}
+//                   </div>
+//                 </CardContent>
+//               </Card>
+
+//               {/* Navigation */}
+//               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+//                 <Button
+//                   onClick={handlePreviousQuestion}
+//                   disabled={currentQuestionIndex === 0}
+//                   variant="outline"
+//                   className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+//                 >
+//                   <ArrowLeft className="mr-2 h-4 w-4" />
+//                   Previous
+//                 </Button>
+
+//                 {/* Question Navigation */}
+//                 <div className="flex gap-2 flex-wrap justify-center">
+//                   {currentExam.questions.map((_, index) => (
+//                     <Button
+//                       key={index}
+//                       onClick={() => setCurrentQuestionIndex(index)}
+//                       variant="outline"
+//                       size="sm"
+//                       className={`w-10 h-10 p-0 ${index === currentQuestionIndex
+//                         ? 'bg-blue-600 border-blue-600 text-white'
+//                         : userAnswers[index] !== null
+//                           ? 'bg-green-600 border-green-600 text-white'
+//                           : 'border-gray-600 text-gray-300 hover:bg-gray-800'
+//                         }`}
+//                     >
+//                       {index + 1}
+//                     </Button>
+//                   ))}
+//                 </div>
+
+//                 {currentQuestionIndex === currentExam.questions.length - 1 ? (
+//                   <Button
+//                     onClick={handleSubmitExam}
+//                     className="bg-green-600 hover:bg-green-700 text-white"
+//                   >
+//                     <Trophy className="mr-2 h-4 w-4" />
+//                     Submit Exam
+//                   </Button>
+//                 ) : (
+//                     <Button
+//                     onClick={handleNextQuestion}
+//                       className="bg-blue-600 hover:bg-blue-700 text-white"
+//                   >
+//                     Next
+//                       <ArrowRight className="ml-2 h-4 w-4" />
+//                     </Button>
+//                 )}
+//               </div>
+//             </motion.div>
+//           )}
+
+//           {/* Results View */}
+//           {currentView === 'results' && (
+//             <motion.div
+//               key="results"
+//               initial={{ opacity: 0, scale: 0.9 }}
+//               animate={{ opacity: 1, scale: 1 }}
+//               exit={{ opacity: 0, scale: 0.9 }}
+//               transition={{ duration: 0.3 }}
+//               className="text-center"
+//             >
+//               <Card className="bg-gray-900/80 border border-green-600 rounded-2xl shadow-2xl max-w-md mx-auto">
+//                 <CardContent className="p-8">
+//                   <Trophy className="h-16 w-16 text-green-400 mx-auto mb-4" />
+//                   <h2 className="text-2xl font-bold text-white mb-4">
+//                     Assessment Completed!
+//                   </h2>
+//                   <p className="text-gray-300 mb-6">
+//                     Your assessment has been submitted successfully.
+//                   </p>
+//                   <Button
+//                     onClick={() => setCurrentView('main')}
+//                     className="bg-blue-600 hover:bg-blue-700 text-white"
+//                   >
+//                     <Play className="mr-2 h-4 w-4" />
+//                     Take Another Assessment
+//                   </Button>
+//                 </CardContent>
+//               </Card>
+//             </motion.div>
+//           )}
+
+//           {/* History View */}
+//           {currentView === 'history' && (
+//             <motion.div
+//               key="history"
+//               initial={{ opacity: 0, x: -20 }}
+//               animate={{ opacity: 1, x: 0 }}
+//               exit={{ opacity: 0, x: 20 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               <div className="text-center mb-10">
+//                 <h2 className="text-3xl font-bold text-white mb-4">
+//                   Assessment History
+//                 </h2>
+//                 <p className="text-gray-300 text-lg">
+//                   View your previous assessment attempts and results.
+//                 </p>
+//               </div>
+
+//               {loadingAttempts ? (
+//                 <div className="flex items-center justify-center py-12">
+//                   <Loader2 className="h-8 w-8 animate-spin text-blue-400 mr-3" />
+//                   <span className="text-blue-200 text-lg">Loading attempts...</span>
+//                 </div>
+//               ) : attemptsError ? (
+//                   <div className="bg-red-950/30 border border-red-700 rounded-lg p-4">
+//                     <div className="flex items-center gap-2 text-red-400">
+//                       <AlertCircle className="h-5 w-5" />
+//                       <span className="font-semibold">{attemptsError}</span>
+//                     </div>
+//                   </div>
+//               ) : attempts.length === 0 ? (
+//                     <Card className="bg-gray-900/80 border border-gray-700 rounded-2xl shadow-2xl max-w-md mx-auto">
+//                       <CardContent className="p-12 text-center">
+//                         <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+//                         <p className="text-gray-300 font-semibold mb-2">
+//                           No assessment attempts found
+//                         </p>
+//                         <p className="text-gray-400 text-sm">
+//                           Complete your first assessment to see results here
+//                         </p>
+//                       </CardContent>
+//                     </Card>
+//               ) : (
+//                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//                         {attempts.map((attempt, index) => (
+//                           <motion.div
+//                       key={attempt.id}
+//                             initial={{ opacity: 0, y: 20 }}
+//                             animate={{ opacity: 1, y: 0 }}
+//                             transition={{ delay: index * 0.1 }}
+//                           >
+//                             <Card
+//                               className="bg-gray-900/80 border border-gray-700 hover:border-blue-600 transition-colors cursor-pointer"
+//                               onClick={() => {
+//                                 setSelectedAttempt(attempt.id);
+//                                 fetchAttemptDetails(attempt.id);
+//                               }}
+//                             >
+//                               <CardContent className="p-6">
+//                                 <div className="flex items-start justify-between mb-4">
+//                                   <h3 className="text-lg font-semibold text-white line-clamp-2">
+//                                     {attempt.jdText?.slice(0, 60)}...
+//                                   </h3>
+//                                   <Badge className="bg-blue-600 text-white">
+//                                     View Details
+//                                   </Badge>
+//                                 </div>
+
+//                                 <div className="space-y-2 text-sm">
+//                                   <div className="text-gray-400">
+//                                     {new Date(attempt.startTime).toLocaleString()}
+//                                   </div>
+//                                   <div className="flex items-center gap-4">
+//                                     <span className="text-green-400 font-bold">
+//                                       {attempt.evaluation?.percentage != null ? `${attempt.evaluation.percentage}%` : '--'}
+//                                     </span>
+//                                     <span className="text-gray-400">
+//                                       Score: {attempt.evaluation?.totalScore ?? '--'}
+//                                     </span>
+//                                   </div>
+//                                   <div className="flex items-center gap-4">
+//                                     <span className={`font-semibold ${attempt.examStatus === 'completed' ? 'text-green-400' :
+//                                       attempt.examStatus === 'timeout' ? 'text-red-400' : 'text-yellow-400'
+//                                       }`}>
+//                                       {attempt.examStatus.charAt(0).toUpperCase() + attempt.examStatus.slice(1)}
+//                                     </span>
+//                                     <span className="text-gray-400">
+//                                       {attempt.timeTaken != null ? `${attempt.timeTaken} min` : '--'}
+//                                     </span>
+//                                   </div>
+//                                 </div>
+//                               </CardContent>
+//                             </Card>
+//                           </motion.div>
+//                   ))}
+//                 </div>
+//               )}
+
+//               {/* Attempt Details Dialog */}
+//               <Dialog open={!!selectedAttempt} onOpenChange={() => {
+//                 setSelectedAttempt(null);
+//                 setAttemptDetails(null);
+//               }}>
+//                 <DialogContent className="bg-gray-900 border-blue-800 max-w-4xl max-h-[80vh] overflow-y-auto">
+//                   <DialogHeader>
+//                     <DialogTitle className="text-2xl font-bold text-blue-300 flex items-center gap-2">
+//                       <Eye className="h-6 w-6" />
+//                       Assessment Details
+//                     </DialogTitle>
+//                   </DialogHeader>
+
+//                   {loadingDetails || !attemptDetails ? (
+//                     <div className="flex items-center justify-center py-12">
+//                       <Loader2 className="h-8 w-8 animate-spin text-blue-400 mr-3" />
+//                       <span className="text-blue-200 text-lg">Loading details...</span>
+//                     </div>
+//                   ) : (
+//                       <div className="space-y-6">
+//                       <div>
+//                           <h3 className="text-xl font-bold text-white mb-2">
+//                           {attemptDetails.jdText?.slice(0, 80)}...
+//                           </h3>
+//                           <p className="text-gray-400">
+//                           Attempted on: {new Date(attemptDetails.startTime).toLocaleString()}
+//                           </p>
+//                         </div>
+
+//                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//                           <div className="text-center">
+//                             <div className="text-2xl font-bold text-green-400">
+//                             {attemptDetails.evaluation?.percentage != null ? `${attemptDetails.evaluation.percentage}%` : '--'}
+//                             </div>
+//                             <div className="text-sm text-gray-400">Score</div>
+//                           </div>
+//                           <div className="text-center">
+//                             <div className="text-2xl font-bold text-blue-400">
+//                               {attemptDetails.evaluation?.totalScore ?? '--'}
+//                             </div>
+//                             <div className="text-sm text-gray-400">Total Score</div>
+//                           </div>
+//                           <div className="text-center">
+//                             <div className="text-2xl font-bold text-purple-400">
+//                               {attemptDetails.timeTaken != null ? `${attemptDetails.timeTaken} min` : '--'}
+//                             </div>
+//                             <div className="text-sm text-gray-400">Time Taken</div>
+//                           </div>
+//                           <div className="text-center">
+//                             <div className={`text-2xl font-bold ${attemptDetails.examStatus === 'completed' ? 'text-green-400' :
+//                               attemptDetails.examStatus === 'timeout' ? 'text-red-400' : 'text-yellow-400'
+//                               }`}>
+//                               {attemptDetails.examStatus.charAt(0).toUpperCase() + attemptDetails.examStatus.slice(1)}
+//                             </div>
+//                             <div className="text-sm text-gray-400">Status</div>
+//                         </div>
+//                         </div>
+
+//                         <Separator className="bg-gray-700" />
+
+//                         <div className="space-y-4">
+//                           <div>
+//                             <h4 className="text-lg font-semibold text-white mb-2">Overall Feedback</h4>
+//                             <p className="text-gray-300">
+//                               {attemptDetails.evaluation?.overallFeedback ?? 'No feedback available.'}
+//                             </p>
+//                           </div>
+
+//                           <div>
+//                             <h4 className="text-lg font-semibold text-white mb-2">Areas to Improve</h4>
+//                             <p className="text-gray-300">
+//                             {Array.isArray(attemptDetails.evaluation?.areasToImprove) && attemptDetails.evaluation.areasToImprove.length > 0
+//                               ? attemptDetails.evaluation.areasToImprove.join(', ')
+//                                 : 'No specific areas identified.'}
+//                             </p>
+//                           </div>
+//                         </div>
+
+//                         <Separator className="bg-gray-700" />
+
+//                         <div>
+//                           <h4 className="text-lg font-semibold text-white mb-4">Question-wise Feedback</h4>
+//                           <div className="space-y-4">
+//                           {Array.isArray(attemptDetails.evaluation?.feedback) && attemptDetails.evaluation.feedback.length > 0 ? (
+//                             attemptDetails.evaluation.feedback.map((fb, idx) => (
+//                               <Card key={idx} className={`${fb.isCorrect ? 'bg-green-950/30 border-green-700' : 'bg-red-950/30 border-red-700'
+//                                 }`}>
+//                                 <CardContent className="p-4">
+//                                   <div className="flex items-center gap-3 mb-3">
+//                                     <Badge className={fb.isCorrect ? 'bg-green-600' : 'bg-red-600'}>
+//                                       {fb.isCorrect ? 'Correct' : 'Wrong'}
+//                                     </Badge>
+//                                     <span className="text-white font-semibold">
+//                                       Q{fb.questionIndex + 1} - {fb.skillFocus}
+//                                     </span>
+//                                   </div>
+
+//                                   <div className="space-y-2 text-sm">
+//                                     <p className="text-white font-medium">
+//                                       {attemptDetails.questions[fb.questionIndex]?.question}
+//                                     </p>
+//                                     <p className="text-gray-300">
+//                                       <span className="font-medium">Your Answer:</span> {attemptDetails.questions[fb.questionIndex]?.options?.[attemptDetails.userAnswers?.[fb.questionIndex]?.selectedOption] ?? 'N/A'}
+//                                     </p>
+//                                     <p className="text-gray-300">
+//                                       <span className="font-medium">Correct Answer:</span> {fb.correctAnswer}
+//                                     </p>
+//                                     <p className="text-gray-300">
+//                                       <span className="font-medium">Explanation:</span> {fb.explanation}
+//                                     </p>
+//                                     <p className="text-gray-300">
+//                                       <span className="font-medium">Suggestion:</span> {fb.suggestion}
+//                                     </p>
+//                                   </div>
+//                                 </CardContent>
+//                               </Card>
+//                             ))
+//                           ) : (
+//                                 <p className="text-gray-400">No feedback available.</p>
+//                           )}
+//                         </div>
+//                         </div>
+//                     </div>
+//                   )}
+//                 </DialogContent>
+//               </Dialog>
+//             </motion.div>
+//           )}
+//         </AnimatePresence>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default MockTest;
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 

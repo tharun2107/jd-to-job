@@ -9,7 +9,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '../components/ui/navigation-menu';
-import { Button } from '../components/ui/button';
+import { Button } from '../components/ui/Button';
 import {
   Sheet,
   SheetContent,
@@ -184,7 +184,7 @@ const Navbar = () => {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
-                {navigationItems.map((item, index) => (
+                {isLoggedIn && navigationItems.map((item, index) => (
                   <NavigationMenuItem key={index}>
                     <NavigationMenuLink asChild>
                       <Link
@@ -256,7 +256,7 @@ const Navbar = () => {
                       <span>Home</span>
                     </Link>
                     
-                    {navigationItems.map((item, index) => (
+                    {isLoggedIn && navigationItems.map((item, index) => (
                       <Link
                         key={index}
                         to={item.href}
