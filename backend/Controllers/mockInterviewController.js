@@ -335,27 +335,43 @@ exports.createMockInterview = async (req, res) => {
     const mockInterview = new MockInterview({
       userId,
       jdId,
-      questions,
+      questions: questions.map(q => ({
+        question: q.question || 'Question not available',
+        type: q.type || 'technical',
+        skill: q.skill || 'General',
+        expectedDuration: q.expectedDuration || 4,
+        difficulty: 'medium'
+      })),
       interviewStatus: 'in-progress',
       startTime: new Date(),
-      duration: INTERVIEW_DURATION,
-      responses: []
+      scheduledDuration: INTERVIEW_DURATION,
+      settings: {
+        cameraEnabled: false,
+        audioRecordingEnabled: true,
+        questionsCount: questions.length,
+        difficultyLevel: 'mixed'
+      },
+      responses: [],
+      questionsAnswered: 0,
+      currentQuestionIndex: 0
     });
 
     await mockInterview.save();
 
-    console.log(`[MockInterview] Created interview ${mockInterview._id} with ${questions.length} questions`);
+    console.log(`[MockInterview] Created interview ${mockInterview._id} (Attempt #${mockInterview.attemptNumber}) with ${questions.length} questions`);
 
     res.json({
       success: true,
       interview: {
         id: mockInterview._id,
-        questions: questions.map(q => ({
-          question: q.question || 'Question not available',
-          type: q.type || 'technical',
-          skill: q.skill || 'General'
+        attemptNumber: mockInterview.attemptNumber,
+        title: mockInterview.interviewTitle,
+        questions: mockInterview.questions.map(q => ({
+          question: q.question,
+          type: q.type,
+          skill: q.skill
         })),
-        duration: mockInterview.duration,
+        duration: mockInterview.scheduledDuration,
         startTime: mockInterview.startTime
       }
     });
@@ -404,6 +420,10 @@ exports.submitInterviewResponse = async (req, res) => {
       timestamp: new Date()
     };
 
+    // Update progress tracking
+    interview.questionsAnswered = interview.responses.filter(r => r && r.transcript).length;
+    interview.currentQuestionIndex = questionIndex;
+
     await interview.save();
 
     res.json({
@@ -439,15 +459,46 @@ exports.completeInterview = async (req, res) => {
     // Analyze interview
     const analysis = await analyzeInterview(interview.questions, interview.responses || []);
 
-    // Update interview
+    // Update interview with analysis
     interview.interviewStatus = 'completed';
     interview.endTime = new Date();
-    interview.analysis = analysis;
+    interview.actualDuration = Math.round((interview.endTime - interview.startTime) / (1000 * 60));
+    interview.questionsAnswered = (interview.responses || []).filter(r => r && r.transcript).length;
+    
+    // Store analysis in proper format
+    interview.analysis = {
+      overallScore: analysis.overallScore,
+      strengths: analysis.strengths || [],
+      weaknesses: analysis.weaknesses || [],
+      technicalCompetency: {
+        rating: analysis.technicalCompetency || 'Could not evaluate',
+        details: ''
+      },
+      communicationSkills: {
+        rating: analysis.communicationSkills || 'Could not evaluate',
+        details: ''
+      },
+      detailedFeedback: analysis.detailedFeedback || '',
+      recommendations: analysis.recommendations || [],
+      questionWiseFeedback: (analysis.questionWiseFeedback || []).map((qf, idx) => ({
+        questionIndex: qf.questionIndex || idx,
+        question: interview.questions[qf.questionIndex || idx]?.question || '',
+        userResponse: interview.responses[qf.questionIndex || idx]?.transcript || '',
+        score: qf.score,
+        feedback: qf.feedback,
+        strengths: qf.strengths || [],
+        improvements: qf.improvements || [],
+        skillAssessed: interview.questions[qf.questionIndex || idx]?.skill || 'General'
+      })),
+      analyzedAt: new Date()
+    };
+    
+    // Quick access score
     interview.overallScore = analysis.overallScore;
-    interview.strengths = analysis.strengths;
-    interview.weaknesses = analysis.weaknesses;
 
     await interview.save();
+
+    console.log(`[MockInterview] Completed interview ${interview._id} with score ${analysis.overallScore}`);
 
     res.json({
       success: true,
@@ -461,7 +512,8 @@ exports.completeInterview = async (req, res) => {
         recommendations: analysis.recommendations,
         questionWiseFeedback: analysis.questionWiseFeedback
       },
-      duration: Math.round((interview.endTime - interview.startTime) / (1000 * 60))
+      attemptNumber: interview.attemptNumber,
+      duration: interview.actualDuration
     });
   } catch (error) {
     console.error('Error completing interview:', error);
@@ -484,37 +536,151 @@ exports.completeInterview = async (req, res) => {
   }
 };
 
-// Get user's interview attempts
-exports.getInterviewAttempts = async (req, res) => {
+// Get user's interview history (all interviews)
+exports.getInterviewHistory = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { jdId } = req.query;
+    const { jdId, status, limit = 20, skip = 0 } = req.query;
 
     const query = { userId };
-    if (jdId) {
-      query.jdId = jdId;
-    }
+    if (jdId) query.jdId = jdId;
+    if (status) query.interviewStatus = status;
 
-    const attempts = await MockInterview.find(query)
-      .populate('jdId', 'jdText')
-      .sort({ createdAt: -1 })
-      .select('-questions -responses -analysis.questionWiseFeedback');
+    const [interviews, total] = await Promise.all([
+      MockInterview.find(query)
+        .populate('jdId', 'jdText')
+        .sort({ createdAt: -1 })
+        .skip(parseInt(skip))
+        .limit(parseInt(limit))
+        .select('attemptNumber interviewTitle interviewStatus overallScore startTime endTime actualDuration createdAt analysis.overallScore analysis.strengths analysis.weaknesses'),
+      MockInterview.countDocuments(query)
+    ]);
 
     res.json({
       success: true,
-      attempts: attempts.map(attempt => ({
-        id: attempt._id,
-        jdText: attempt.jdId?.jdText,
-        interviewStatus: attempt.interviewStatus,
-        overallScore: attempt.overallScore,
-        startTime: attempt.startTime,
-        endTime: attempt.endTime,
-        duration: attempt.duration
+      interviews: interviews.map(interview => ({
+        id: interview._id,
+        attemptNumber: interview.attemptNumber,
+        title: interview.interviewTitle,
+        jdId: interview.jdId?._id,
+        jdPreview: interview.jdId?.jdText?.substring(0, 100) + '...',
+        status: interview.interviewStatus,
+        score: interview.overallScore || interview.analysis?.overallScore,
+        strengths: interview.analysis?.strengths || [],
+        weaknesses: interview.analysis?.weaknesses || [],
+        startTime: interview.startTime,
+        endTime: interview.endTime,
+        duration: interview.actualDuration,
+        createdAt: interview.createdAt
+      })),
+      pagination: {
+        total,
+        limit: parseInt(limit),
+        skip: parseInt(skip),
+        hasMore: parseInt(skip) + interviews.length < total
+      }
+    });
+  } catch (error) {
+    console.error('Error getting interview history:', error);
+    res.status(500).json({ error: 'Failed to get interview history' });
+  }
+};
+
+// Get interviews for a specific JD
+exports.getInterviewsByJD = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { jdId } = req.params;
+
+    const interviews = await MockInterview.find({ userId, jdId })
+      .sort({ createdAt: -1 })
+      .select('attemptNumber interviewTitle interviewStatus overallScore startTime endTime actualDuration createdAt analysis.overallScore analysis.strengths analysis.weaknesses analysis.detailedFeedback');
+
+    res.json({
+      success: true,
+      jdId,
+      totalAttempts: interviews.length,
+      interviews: interviews.map(interview => ({
+        id: interview._id,
+        attemptNumber: interview.attemptNumber,
+        title: interview.interviewTitle,
+        status: interview.interviewStatus,
+        score: interview.overallScore || interview.analysis?.overallScore,
+        strengths: interview.analysis?.strengths || [],
+        weaknesses: interview.analysis?.weaknesses || [],
+        feedback: interview.analysis?.detailedFeedback,
+        startTime: interview.startTime,
+        endTime: interview.endTime,
+        duration: interview.actualDuration,
+        createdAt: interview.createdAt
       }))
     });
   } catch (error) {
-    console.error('Error getting interview attempts:', error);
-    res.status(500).json({ error: 'Failed to get interview attempts' });
+    console.error('Error getting JD interviews:', error);
+    res.status(500).json({ error: 'Failed to get JD interviews' });
+  }
+};
+
+// Get user interview stats
+exports.getInterviewStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const stats = await MockInterview.aggregate([
+      { $match: { userId: new (require('mongoose').Types.ObjectId)(userId) } },
+      {
+        $group: {
+          _id: null,
+          totalInterviews: { $sum: 1 },
+          completedInterviews: {
+            $sum: { $cond: [{ $eq: ['$interviewStatus', 'completed'] }, 1, 0] }
+          },
+          averageScore: { 
+            $avg: { $ifNull: ['$overallScore', '$analysis.overallScore'] }
+          },
+          highestScore: { 
+            $max: { $ifNull: ['$overallScore', '$analysis.overallScore'] }
+          },
+          totalTimeSpent: { $sum: { $ifNull: ['$actualDuration', 0] } }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalInterviews: 0,
+      completedInterviews: 0,
+      averageScore: 0,
+      highestScore: 0,
+      totalTimeSpent: 0
+    };
+
+    // Get recent progress (last 5 completed interviews)
+    const recentProgress = await MockInterview.find({
+      userId,
+      interviewStatus: 'completed',
+      overallScore: { $exists: true }
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('overallScore createdAt');
+
+    res.json({
+      success: true,
+      stats: {
+        ...result,
+        averageScore: Math.round(result.averageScore || 0),
+        completionRate: result.totalInterviews > 0 
+          ? Math.round((result.completedInterviews / result.totalInterviews) * 100) 
+          : 0
+      },
+      recentProgress: recentProgress.map(p => ({
+        score: p.overallScore,
+        date: p.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting interview stats:', error);
+    res.status(500).json({ error: 'Failed to get interview stats' });
   }
 };
 

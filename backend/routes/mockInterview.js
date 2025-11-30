@@ -12,11 +12,16 @@ router.post('/submit-response', authMiddleware, mockInterviewController.submitIn
 // Complete interview and get analysis
 router.post('/complete', authMiddleware, mockInterviewController.completeInterview);
 
-// Get user's interview attempts
-router.get('/attempts', authMiddleware, mockInterviewController.getInterviewAttempts);
+// Get user's interview history (all interviews)
+router.get('/history', authMiddleware, mockInterviewController.getInterviewHistory);
+
+// Get interviews for a specific JD
+router.get('/jd/:jdId', authMiddleware, mockInterviewController.getInterviewsByJD);
+
+// Get user interview stats
+router.get('/stats', authMiddleware, mockInterviewController.getInterviewStats);
 
 // Get specific interview result
 router.get('/result/:interviewId', authMiddleware, mockInterviewController.getInterviewResult);
 
 module.exports = router;
-
