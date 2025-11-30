@@ -166,6 +166,14 @@ const MockInterview = () => {
     }
   };
 
+  // Connect video stream to video element when stream changes
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(err => console.log('Video play error:', err));
+    }
+  }, [cameraStream]);
+
   // Cleanup camera on unmount
   useEffect(() => {
     return () => {
@@ -436,15 +444,16 @@ const MockInterview = () => {
                   {/* Your Camera Feed */}
                   <div className="relative">
                     <div className="h-40 w-full bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
-                      {cameraEnabled ? (
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          muted
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
+                      {/* Always render video element, hide when camera is off */}
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className={`w-full h-full object-cover ${cameraEnabled ? 'block' : 'hidden'}`}
+                        style={{ transform: 'scaleX(-1)' }} // Mirror the video
+                      />
+                      {!cameraEnabled && (
                         <div className="text-center">
                           <CameraOff className="h-8 w-8 text-gray-500 mx-auto mb-2" />
                           <p className="text-gray-500 text-sm">Camera Off</p>
