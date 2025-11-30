@@ -41,7 +41,10 @@ import {
   Brain,
   TrendingUp,
   AlertCircle,
-  Loader2
+  Loader2,
+  Camera,
+  CameraOff,
+  Video
 } from 'lucide-react';
 
 console.log('Lucide icons:', { Mic, MicOff, Play, CheckCircle, Clock, Brain, TrendingUp, AlertCircle, Loader2 });
@@ -62,9 +65,12 @@ const MockInterview = () => {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
 
   const recognitionRef = useRef(null);
   const timerRef = useRef(null);
+  const videoRef = useRef(null);
   const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
 
   // Load JDs
@@ -128,6 +134,46 @@ const MockInterview = () => {
       };
     }
   }, []);
+
+  // Camera toggle function
+  const toggleCamera = async () => {
+    if (cameraEnabled) {
+      // Stop camera
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        setCameraStream(null);
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      setCameraEnabled(false);
+    } else {
+      // Start camera
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 320, height: 240, facingMode: 'user' },
+          audio: false 
+        });
+        setCameraStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setCameraEnabled(true);
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        setError('Could not access camera. Please check permissions.');
+      }
+    }
+  };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
 
   // Start interview
   const handleStartInterview = async () => {
@@ -379,11 +425,52 @@ const MockInterview = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 w-full bg-gray-800 rounded-lg flex items-center justify-center">
+                  {/* AI Avatar */}
+                  <div className="h-40 w-full bg-gray-800 rounded-lg flex items-center justify-center mb-4">
                     <div className="text-center">
-                      <div className="text-6xl mb-4">👤</div>
-                      <p className="text-gray-400">AI Interviewer</p>
+                      <div className="text-5xl mb-2">🤖</div>
+                      <p className="text-gray-400 text-sm">AI Interviewer</p>
                     </div>
+                  </div>
+                  
+                  {/* Your Camera Feed */}
+                  <div className="relative">
+                    <div className="h-40 w-full bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
+                      {cameraEnabled ? (
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <CameraOff className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">Camera Off</p>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      onClick={toggleCamera}
+                      size="sm"
+                      className={`absolute bottom-2 right-2 ${
+                        cameraEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {cameraEnabled ? (
+                        <React.Fragment>
+                          <CameraOff className="h-4 w-4 mr-1" />
+                          Off
+                        </React.Fragment>
+                      ) : (
+                        <React.Fragment>
+                          <Camera className="h-4 w-4 mr-1" />
+                          On
+                        </React.Fragment>
+                      )}
+                    </Button>
+                    <p className="text-gray-400 text-xs text-center mt-1">Your Camera</p>
                   </div>
                   <div className="mt-4 text-center">
                     <p className="text-gray-400 text-sm">
@@ -536,6 +623,24 @@ const MockInterview = () => {
                   </div>
                 )}
 
+                {/* Technical & Communication Scores */}
+                {(analysis.technicalCompetency || analysis.communicationSkills) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {analysis.technicalCompetency && (
+                      <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-sm mb-1">Technical Competency</p>
+                        <p className="text-xl font-semibold text-blue-300">{analysis.technicalCompetency}</p>
+                      </div>
+                    )}
+                    {analysis.communicationSkills && (
+                      <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-sm mb-1">Communication Skills</p>
+                        <p className="text-xl font-semibold text-cyan-300">{analysis.communicationSkills}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {analysis.detailedFeedback && (
                   <div>
                     <h3 className="text-lg font-semibold text-blue-300 mb-3">Detailed Feedback</h3>
@@ -544,6 +649,18 @@ const MockInterview = () => {
                         {analysis.detailedFeedback}
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {analysis.recommendations && analysis.recommendations.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-purple-400 mb-3">Recommendations</h3>
+                    <ul className="list-disc list-inside space-y-2 text-gray-300">
+                      {analysis.recommendations.map((rec, idx) => (
+                        <li key={idx}>{rec}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
