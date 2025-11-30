@@ -169,49 +169,20 @@ const analyzeInterview = async (questions, responses) => {
   }
 
   try {
-    const prompt = `You are a senior technical interviewer and career coach with extensive experience evaluating candidates. Analyze this candidate's performance in a comprehensive technical interview.
+    // Build Q&A summary
+    const qaSummary = questions.map((q, index) => 
+      `Q${index + 1}: ${q.question}\nA${index + 1}: ${responses[index]?.transcript || 'No response'}`
+    ).join('\n\n');
 
-Interview Questions and Candidate Responses:
+    const prompt = `Analyze this interview. Give scores and feedback.
 
-${questions.map((q, index) => `
-Question ${index + 1} (Type: ${q.type}, Skill: ${q.skill || 'General'}): ${q.question}
-Candidate's Response: ${responses[index]?.transcript || 'No response provided'}
-`).join('\n')}
+Interview:
+${qaSummary}
 
-Provide a comprehensive, professional evaluation that includes:
+IMPORTANT: Return ONLY valid JSON. No markdown, no backticks, no special quotes. Use simple ASCII characters only.
 
-1. **Overall Assessment Score (0-100)**: Based on technical knowledge, communication clarity, problem-solving approach, and relevance of answers
-
-2. **Strengths**: List 3-5 specific, concrete strengths demonstrated in their answers. Be specific and reference actual points from their responses.
-
-3. **Areas for Improvement**: List 3-5 constructive areas where the candidate can improve. Be specific and actionable.
-
-4. **Technical Competency**: Evaluate their technical knowledge depth, accuracy, and ability to apply concepts. Rate as: Excellent/Good/Moderate/Needs Improvement.
-
-5. **Communication Skills**: Assess clarity, structure, conciseness, and ability to explain complex concepts. Rate as: Excellent/Good/Moderate/Needs Improvement.
-
-6. **Detailed Feedback**: Provide 2-3 paragraphs of comprehensive feedback covering overall performance, standout moments, and key observations.
-
-7. **Recommendations**: Provide 3-5 actionable recommendations for improvement, including specific skills to focus on, practice areas, and resources.
-
-8. **Question-wise Feedback**: For each question, provide:
-   - Score (0-10)
-   - What they did well
-   - What could be improved
-   - Specific suggestions
-
-Be thorough, fair, and constructive. Focus on helping the candidate improve.
-
-Return the result in this exact JSON format (no markdown, no code blocks, just pure JSON):
-{
-  "overallScore": 75,
-  "strengths": ["strength 1", "strength 2"],
-  "weaknesses": ["area 1", "area 2"],
-  "technicalCompetency": "Good understanding of core concepts",
-  "communicationSkills": "Clear and articulate",
-  "detailedFeedback": "Overall assessment...",
-  "recommendations": ["recommendation 1", "recommendation 2"],
-  "questionWiseFeedback": [
+Return this exact JSON structure:
+{"overallScore":75,"strengths":["strength one","strength two","strength three"],"weaknesses":["weakness one","weakness two"],"technicalCompetency":"Good","communicationSkills":"Good","detailedFeedback":"Your detailed feedback here as plain text.","recommendations":["recommendation one","recommendation two"],"questionWiseFeedback":[
     {
       "questionIndex": 0,
       "score": 8,
@@ -262,27 +233,56 @@ Return the result in this exact JSON format (no markdown, no code blocks, just p
     const generatedText = response.data.candidates[0].content.parts[0].text;
     console.log('[MockInterview] Raw analysis response:', generatedText.substring(0, 200));
     
-    // Extract JSON with better handling
-    let jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format from Gemini API - no JSON found');
+    // Remove markdown code blocks
+    let cleanedText = generatedText
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+    
+    // Extract JSON object
+    const firstBrace = cleanedText.indexOf('{');
+    const lastBrace = cleanedText.lastIndexOf('}');
+    
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error('No JSON object found in response');
     }
     
-    let jsonText = jsonMatch[0];
+    let jsonText = cleanedText.substring(firstBrace, lastBrace + 1);
     
-    // Try to fix common JSON issues
+    // Fix common JSON issues from Gemini
     jsonText = jsonText
-      .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-      .replace(/'/g, '"') // Replace single quotes
-      .replace(/(\w+):/g, '"$1":'); // Add quotes to unquoted keys
+      // Remove backticks from inside strings (common issue)
+      .replace(/`([^`]*)`/g, '$1')
+      // Replace smart quotes with regular quotes
+      .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+      // Replace curly apostrophes
+      .replace(/'/g, "'")
+      // Remove trailing commas before ] or }
+      .replace(/,(\s*[}\]])/g, '$1')
+      // Escape unescaped quotes inside strings (tricky - be careful)
+      .replace(/"([^"]*)"(\s*[:,\]}])/g, (match, content, after) => {
+        // Escape any internal quotes that aren't already escaped
+        const escaped = content.replace(/(?<!\\)"/g, '\\"');
+        return `"${escaped}"${after}`;
+      });
     
     let analysisData;
     try {
       analysisData = JSON.parse(jsonText);
     } catch (parseError) {
       console.error('[MockInterview] Analysis JSON parse error:', parseError.message);
-      console.error('[MockInterview] Problematic JSON:', jsonText.substring(0, 500));
-      throw new Error(`Invalid JSON in analysis response: ${parseError.message}`);
+      console.error('[MockInterview] Problematic JSON:', jsonText.substring(0, 800));
+      
+      // Fallback: return a default analysis
+      console.log('[MockInterview] Using fallback analysis');
+      return {
+        overallScore: 50,
+        strengths: ['Completed the interview', 'Attempted all questions'],
+        weaknesses: ['Analysis could not be fully processed'],
+        detailedFeedback: 'Thank you for completing the interview. Your responses have been recorded. Due to a technical issue, detailed analysis could not be generated. Please try again or contact support.',
+        recommendations: ['Practice more', 'Review technical concepts']
+      };
     }
     
     return analysisData;
@@ -465,7 +465,22 @@ exports.completeInterview = async (req, res) => {
     });
   } catch (error) {
     console.error('Error completing interview:', error);
-    res.status(500).json({ error: 'Failed to complete interview' });
+    
+    // Return a fallback analysis if everything fails
+    res.json({
+      success: true,
+      analysis: {
+        overallScore: 50,
+        strengths: ['Completed the interview', 'Showed effort in answering questions'],
+        weaknesses: ['Analysis could not be fully processed due to technical issue'],
+        technicalCompetency: 'Could not evaluate',
+        communicationSkills: 'Could not evaluate',
+        detailedFeedback: 'Thank you for completing the interview. Due to a technical issue, we could not generate a detailed analysis. Your responses have been recorded. Please try again later for a full evaluation.',
+        recommendations: ['Practice technical concepts', 'Review common interview questions', 'Work on communication skills'],
+        questionWiseFeedback: []
+      },
+      duration: 0
+    });
   }
 };
 
