@@ -162,34 +162,36 @@ const Navbar = () => {
                   </NavigationMenuLink>
                 </NavigationMenuItem>
 
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-gray-300 hover:bg-gray-800 hover:text-white">
-                    Features
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                      {features.map((feature, index) => (
-                        <Link
-                          key={index}
-                          to={feature.href}
-                          className="group relative flex cursor-pointer select-none items-center rounded-md p-3 text-sm leading-none no-underline outline-none transition-colors hover:bg-gray-800 hover:text-white"
-                        >
-                          <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white">
-                            {feature.icon}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-white group-hover:text-white">
-                              {feature.title}
+                {isLoggedIn && (
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="text-gray-300 hover:bg-gray-800 hover:text-white">
+                      Features
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                        {features.map((feature, index) => (
+                          <Link
+                            key={index}
+                            to={feature.href}
+                            className="group relative flex cursor-pointer select-none items-center rounded-md p-3 text-sm leading-none no-underline outline-none transition-colors hover:bg-gray-800 hover:text-white"
+                          >
+                            <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white">
+                              {feature.icon}
                             </div>
-                            <div className="text-xs text-gray-400 group-hover:text-gray-300">
-                              {feature.description}
+                            <div>
+                              <div className="text-sm font-medium text-white group-hover:text-white">
+                                {feature.title}
+                              </div>
+                              <div className="text-xs text-gray-400 group-hover:text-gray-300">
+                                {feature.description}
+                              </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+                          </Link>
+                        ))}
+                      </div>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                )}
 
                 {isLoggedIn && navigationItems.map((item, index) => (
                   <NavigationMenuItem key={index}>

@@ -842,12 +842,14 @@ const MockInterview = () => {
                       <Button
                         onClick={handleSubmitResponse}
                         disabled={!transcript.trim() || loading}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className={`flex-1 ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                       >
                         {loading ? (
                           <React.Fragment>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
+                            {currentQuestionIndex < interview.questions.length - 1 
+                              ? 'Please wait, saving response...' 
+                              : 'Please wait, analyzing interview...'}
                           </React.Fragment>
                         ) : currentQuestionIndex < interview.questions.length - 1 ? (
                           'Next Question'

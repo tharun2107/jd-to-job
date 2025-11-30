@@ -997,6 +997,7 @@ const MockTest = () => {
   
   // Exam result state
   const [examResult, setExamResult] = useState(null);
+  const [submittingExam, setSubmittingExam] = useState(false);
 
   // Time limits for different question counts
   const TIME_LIMITS = {
@@ -1153,8 +1154,9 @@ const MockTest = () => {
   };
 
   const handleSubmitExam = async () => {
-    if (!currentExam) return;
+    if (!currentExam || submittingExam) return;
 
+    setSubmittingExam(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post('http://localhost:5001/api/mocktest/submit', {
@@ -1175,6 +1177,8 @@ const MockTest = () => {
     } catch (error) {
       console.error('Error submitting exam:', error);
       alert('Failed to submit exam. Please try again.');
+    } finally {
+      setSubmittingExam(false);
     }
   };
 
@@ -1950,18 +1954,39 @@ const MockTest = () => {
                 {currentQuestionIndex === currentExam.questions.length - 1 ? (
                   <button
                     onClick={handleSubmitExam}
+                    disabled={submittingExam}
                     style={{
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      background: submittingExam 
+                        ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' 
+                        : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       color: 'white',
                       border: 'none',
                       padding: '12px 24px',
                       borderRadius: 8,
-                      cursor: 'pointer',
+                      cursor: submittingExam ? 'not-allowed' : 'pointer',
                       fontSize: 16,
-                      fontWeight: 700
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      opacity: submittingExam ? 0.8 : 1
                     }}
                   >
-                    Submit Exam
+                    {submittingExam ? (
+                      <>
+                        <span style={{
+                          width: '16px',
+                          height: '16px',
+                          border: '2px solid white',
+                          borderTopColor: 'transparent',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }} />
+                        Please wait, submitting...
+                      </>
+                    ) : (
+                      'Submit Exam'
+                    )}
                   </button>
                 ) : (
                   <button
