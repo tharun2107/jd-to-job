@@ -46,7 +46,7 @@ import Resources from './pages/Resources';
 import ResumeBuilder from './pages/ResumeBuilder';
 import MockTest from './pages/MockTest';
 import MockInterview from './pages/MockInterview';
-// import other pages as needed
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -62,7 +62,7 @@ function App() {
         <Route path="/resume-builder" element={<ResumeBuilder />} />
         <Route path="/mock-test" element={<MockTest />} />
         <Route path="/mock-interview" element={<MockInterview />} />
-        {/* Add other routes here */}
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </>
   );
