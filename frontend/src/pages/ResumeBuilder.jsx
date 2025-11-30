@@ -149,6 +149,8 @@ function App() {
   const [customSectionTitle, setCustomSectionTitle] = useState("");
   const [customSectionItem, setCustomSectionItem] = useState("");
   const previewRef = useRef();
+  const previewScrollRef = useRef();
+  const [previewZoom, setPreviewZoom] = useState(100);
 
   // Template and save states
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
@@ -388,11 +390,17 @@ function App() {
   const handleDownloadPDF = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
     if (previewRef.current) {
-      // Clone the element to avoid modifying the original
+      // Save current zoom and reset to 100% for export
+      const currentZoom = previewZoom;
+      setPreviewZoom(100);
+      
+      // Wait for state update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const element = previewRef.current;
       
-      html2pdf().from(element).set({
-        margin: [0.2, 0, 0.2, 0], // Small top/bottom margins
+      await html2pdf().from(element).set({
+        margin: [0.2, 0.2, 0.2, 0.2],
         filename: `${resume.personalInfo.name || "resume"}_${selectedTemplate}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { 
@@ -403,8 +411,11 @@ function App() {
           allowTaint: true
         },
         jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       }).save();
+      
+      // Restore zoom
+      setPreviewZoom(currentZoom);
     } else {
       alert("Preview not found!");
     }
@@ -659,12 +670,57 @@ function App() {
         </fieldset>
       </div>
       {/* Right: ATS Resume Preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f7f7fa', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '1.5rem', minHeight: '80vh', overflowY: 'auto', maxHeight: '85vh', overflowX: 'hidden' }}>
-        {/* Download button */}
-        <button onClick={handleDownloadPDF} style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', cursor: 'pointer', fontWeight: 600, fontSize: '1rem', marginBottom: '1rem' }}>📥 Download PDF</button>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f7f7fa', borderRadius: '12px', boxShadow: '0 2px 16px #e0e7ff', padding: '1rem', minHeight: '80vh' }}>
+        {/* Controls Bar */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%', padding: '0 0.5rem', flexShrink: 0 }}>
+          <button onClick={handleDownloadPDF} style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>📥 Download PDF</button>
+          
+          {/* Scroll Controls */}
+          <div style={{ display: 'flex', gap: '0.25rem', background: '#e2e8f0', borderRadius: 8, padding: '4px' }}>
+            <button onClick={() => previewScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} style={{ background: 'transparent', border: 'none', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', borderRadius: 4 }} title="Top">⬆️</button>
+            <button onClick={() => previewScrollRef.current?.scrollBy({ top: -200, behavior: 'smooth' })} style={{ background: 'transparent', border: 'none', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', borderRadius: 4 }} title="Up">🔼</button>
+            <button onClick={() => previewScrollRef.current?.scrollBy({ top: 200, behavior: 'smooth' })} style={{ background: 'transparent', border: 'none', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', borderRadius: 4 }} title="Down">🔽</button>
+            <button onClick={() => previewScrollRef.current?.scrollTo({ top: previewScrollRef.current.scrollHeight, behavior: 'smooth' })} style={{ background: 'transparent', border: 'none', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', borderRadius: 4 }} title="Bottom">⬇️</button>
+            </div>
+          
+          {/* Zoom Controls */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#e2e8f0', borderRadius: 8, padding: '4px 8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#475569' }}>🔍</span>
+            <input 
+              type="range" 
+              min="30" 
+              max="150" 
+              value={previewZoom} 
+              onChange={(e) => setPreviewZoom(Number(e.target.value))}
+              style={{ width: '80px', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '0.75rem', color: '#475569', minWidth: '35px' }}>{previewZoom}%</span>
+            <button onClick={() => setPreviewZoom(100)} style={{ background: '#64748b', color: '#fff', border: 'none', padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem', cursor: 'pointer' }}>Reset</button>
+          </div>
+                </div>
         
-        {/* Template-based Preview */}
-        <div ref={previewRef} id="resume-preview" style={{ width: '210mm', maxWidth: '210mm', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', background: '#fff', overflow: 'hidden' }}>
+        {/* Scrollable Preview Container - Use mouse wheel or scroll bars to view full resume */}
+        <div ref={previewScrollRef} style={{ 
+          flex: 1, 
+          overflowY: 'scroll', 
+          overflowX: 'auto', 
+          width: '100%', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          paddingBottom: '2rem',
+          maxHeight: 'calc(85vh - 60px)'
+        }}>
+          {/* Template-based Preview */}
+          <div ref={previewRef} id="resume-preview" style={{ 
+            width: '210mm', 
+            minWidth: '210mm',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)', 
+            background: '#fff', 
+            flexShrink: 0,
+            transform: `scale(${previewZoom / 100})`,
+            transformOrigin: 'top center',
+            marginBottom: `${(previewZoom < 100) ? (100 - previewZoom) * 10 : 0}px`
+          }}>
           
           {/* ============ CLASSIC TEMPLATE ============ */}
           {selectedTemplate === 'classic' && (
@@ -689,7 +745,7 @@ function App() {
                 {normalizedProjects.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '0.5em' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 600 }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0645AD', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#444' }}>{proj.monthYear}</span></div><ul style={bulletList}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
                 {resume.certifications.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>CERTIFICATIONS</div><ul style={bulletList}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
                 {resume.achievements.length > 0 && <div style={{ marginBottom: '1rem' }}><div style={sectionHeader}>ACHIEVEMENTS</div><ul style={bulletList}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
-              </div>
+                </div>
             </div>
           )}
 
@@ -721,16 +777,71 @@ function App() {
               <div style={{ display: 'flex' }}>
                 {/* Left Sidebar */}
                 <div style={{ width: '35%', background: '#f0f7ff', padding: '1.5rem', borderRight: '1px solid #cce0ff' }}>
-                  {resume.summary && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>PROFILE</div><div style={{ fontSize: '0.95rem', color: '#333', lineHeight: 1.5 }}>{resume.summary}</div></div>}
-                  {skillsGroups.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>SKILLS</div><div style={{ fontSize: '0.9rem' }}>{skillsGroups.map((g, i) => <div key={i} style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#0066cc' }}>{g.name}</strong><br/>{g.skills.join(' • ')}</div>)}</div></div>}
-                  {resume.education.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>EDUCATION</div>{resume.education.map((ed, idx) => (<div key={idx} style={{ marginBottom: '0.8rem', fontSize: '0.9rem' }}><div style={{ fontWeight: 600, color: '#0066cc' }}>{ed.institution}</div><div>{ed.degree}{ed.branch && ` in ${ed.branch}`}</div><div style={{ color: '#666', fontSize: '0.85rem' }}>{ed.duration}{ed.cgpa && ` | CGPA: ${ed.cgpa}`}</div></div>))}</div>}
-                  {resume.certifications.length > 0 && <div><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>CERTIFICATIONS</div><ul style={{ ...bulletList, fontSize: '0.9rem' }}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul></div>}
+                  {resume.summary && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>PROFILE</div>
+                      <div style={{ fontSize: '0.95rem', color: '#333', lineHeight: 1.5 }}>{resume.summary}</div>
+                    </div>
+                  )}
+                  {skillsGroups.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>SKILLS</div>
+                      <div style={{ fontSize: '0.9rem' }}>{skillsGroups.map((g, i) => <div key={i} style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#0066cc' }}>{g.name}</strong><br/>{g.skills.join(' • ')}</div>)}</div>
+                    </div>
+                  )}
+                  {resume.education.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>EDUCATION</div>
+                      {resume.education.map((ed, idx) => (
+                        <div key={idx} style={{ marginBottom: '0.8rem', fontSize: '0.9rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0066cc' }}>{ed.institution}</div>
+                          <div>{ed.degree}{ed.branch && ` in ${ed.branch}`}</div>
+                          <div style={{ color: '#666', fontSize: '0.85rem' }}>{ed.duration}{ed.cgpa && ` | CGPA: ${ed.cgpa}`}</div>
+              </div>
+            ))}
+                    </div>
+                  )}
+                  {resume.certifications.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>CERTIFICATIONS</div>
+                      <ul style={{ ...bulletList, fontSize: '0.9rem', marginTop: '0.3rem' }}>{resume.certifications.flatMap((c, i) => c.name.split(',').map((item, j) => <li key={`${i}-${j}`} style={bullet}>{item.trim()}</li>))}</ul>
+                  </div>
+                  )}
                 </div>
                 {/* Right Content */}
                 <div style={{ flex: 1, padding: '1.5rem' }}>
-                  {resume.experience.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>EXPERIENCE</div>{resume.experience.map((exp, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600, color: '#0066cc' }}>{exp.role}</span><span style={{ color: '#666', fontSize: '0.9rem' }}>{exp.duration}</span></div><div style={{ fontWeight: 500, color: '#333' }}>{exp.company}</div><ul style={bulletList}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
-                  {normalizedProjects.length > 0 && <div style={{ marginBottom: '1.2rem' }}><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>PROJECTS</div>{normalizedProjects.map((proj, idx) => (<div key={idx} style={{ marginBottom: '1rem' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontWeight: 600, color: '#0066cc' }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', color: '#666', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', marginLeft: 8 }}>{l.label}</a>)}</div><span style={{ color: '#666', fontSize: '0.9rem' }}>{proj.monthYear}</span></div><ul style={bulletList}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul></div>))}</div>}
-                  {resume.achievements.length > 0 && <div><div style={{ ...sectionHeader, color: '#0066cc', borderColor: '#0066cc' }}>ACHIEVEMENTS</div><ul style={bulletList}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul></div>}
+                  {resume.experience.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>EXPERIENCE</div>
+                      {resume.experience.map((exp, idx) => (
+                        <div key={idx} style={{ marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600, color: '#0066cc' }}>{exp.role}</span><span style={{ color: '#666', fontSize: '0.9rem' }}>{exp.duration}</span></div>
+                          <div style={{ fontWeight: 500, color: '#333' }}>{exp.company}</div>
+                          <ul style={{ ...bulletList, marginTop: '0.3rem' }}>{(exp.details || []).map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul>
+              </div>
+            ))}
+                    </div>
+                  )}
+          {normalizedProjects.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>PROJECTS</div>
+              {normalizedProjects.map((proj, idx) => (
+                        <div key={idx} style={{ marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div><span style={{ fontWeight: 600, color: '#0066cc' }}>{proj.title}</span>{proj.techStack?.length > 0 && <span style={{ fontStyle: 'italic', color: '#666', marginLeft: 8 }}>{proj.techStack.join(', ')}</span>}{proj.links?.map((l, i) => l?.url && <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', marginLeft: 8 }}>{l.label}</a>)}</div>
+                            <span style={{ color: '#666', fontSize: '0.9rem' }}>{proj.monthYear}</span>
+                          </div>
+                          <ul style={{ ...bulletList, marginTop: '0.3rem' }}>{proj.description?.map((d, i) => d && <li key={i} style={bullet}>{d}</li>)}</ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {resume.achievements.length > 0 && (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0066cc', borderBottom: '2px solid #0066cc', paddingBottom: '0.4rem', marginBottom: '0.6rem', letterSpacing: '0.5px' }}>ACHIEVEMENTS</div>
+                      <ul style={{ ...bulletList, marginTop: '0.3rem' }}>{resume.achievements.map((a, i) => (a.point || []).map((d, j) => d && <li key={`${i}-${j}`} style={bullet}>{d}</li>))}</ul>
+                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -795,9 +906,10 @@ function App() {
             </div>
           )}
 
+            </div>
+        </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
