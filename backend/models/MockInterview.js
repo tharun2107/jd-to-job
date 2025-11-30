@@ -12,21 +12,28 @@ const QuestionFeedbackSchema = new mongoose.Schema({
   skillAssessed: String
 }, { _id: false });
 
+// Valid rating values
+const VALID_RATINGS = [
+  'Excellent', 'Very Good', 'Good', 'Above Average', 'Average', 
+  'Moderate', 'Below Average', 'Needs Improvement', 'Poor', 'Very Poor',
+  'Could not evaluate', 'Not Applicable'
+];
+
 // Interview analysis/feedback schema
 const InterviewAnalysisSchema = new mongoose.Schema({
   overallScore: { type: Number, min: 0, max: 100 },
   strengths: [String],
   weaknesses: [String],
   technicalCompetency: {
-    rating: { type: String, enum: ['Excellent', 'Good', 'Moderate', 'Needs Improvement', 'Could not evaluate'] },
+    rating: { type: String },  // Removed enum restriction - will normalize in controller
     details: String
   },
   communicationSkills: {
-    rating: { type: String, enum: ['Excellent', 'Good', 'Moderate', 'Needs Improvement', 'Could not evaluate'] },
+    rating: { type: String },  // Removed enum restriction - will normalize in controller
     details: String
   },
   problemSolving: {
-    rating: { type: String, enum: ['Excellent', 'Good', 'Moderate', 'Needs Improvement', 'Could not evaluate'] },
+    rating: { type: String },  // Removed enum restriction - will normalize in controller
     details: String
   },
   detailedFeedback: String,

@@ -1,11 +1,19 @@
 # skill_groups.py
 import pandas as pd
+import os
+from pathlib import Path
 from collections import defaultdict
 
 GROUPED_SKILLS_PATH = "grouped_skills_dataset.csv"
 
 def load_grouped_skills():
-    df = pd.read_csv(GROUPED_SKILLS_PATH)
+    # Resolve path relative to project root
+    path = GROUPED_SKILLS_PATH
+    if not os.path.isabs(path):
+        project_root = Path(__file__).parent.parent
+        path = os.path.join(project_root, path)
+    
+    df = pd.read_csv(path)
     grouped = defaultdict(list)
     for _, row in df.iterrows():
         group = row['Group'].strip().lower()

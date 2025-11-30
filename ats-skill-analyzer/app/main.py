@@ -1,6 +1,14 @@
 from flask import Flask, request, jsonify
 import fitz  # PyMuPDF
 import os
+import sys
+from pathlib import Path
+
+# Add parent directory to Python path to allow 'app' module imports
+parent_dir = Path(__file__).parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 from app.skills_loader import load_skills
 from app.extractor import SkillExtractor
 from app.matcher import match_skills
@@ -101,6 +109,9 @@ def analyze():
         "section_bonuses": exp_info.get("section_bonuses", {}),
         "section_penalties": exp_info.get("section_penalties", {}),
         "missing_sections": exp_info.get("missing_sections", []),
+        # --- Hybrid matching info ---
+        "match_types": exp_info.get("match_types", {}),  # fuzzy vs semantic match counts
+        "semantic_enabled": exp_info.get("semantic_enabled", False),  # whether BERT matching is active
     })
 
 if __name__ == '__main__':

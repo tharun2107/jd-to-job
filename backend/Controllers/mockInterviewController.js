@@ -174,24 +174,24 @@ const analyzeInterview = async (questions, responses) => {
       `Q${index + 1}: ${q.question}\nA${index + 1}: ${responses[index]?.transcript || 'No response'}`
     ).join('\n\n');
 
-    const prompt = `Analyze this interview. Give scores and feedback.
+    const prompt = `You are a professional interview evaluator. Analyze these interview responses and provide detailed feedback.
 
-Interview:
+INTERVIEW QUESTIONS AND RESPONSES:
 ${qaSummary}
 
-IMPORTANT: Return ONLY valid JSON. No markdown, no backticks, no special quotes. Use simple ASCII characters only.
+EVALUATION CRITERIA:
+- overallScore: 0-100 based on technical knowledge, communication, and relevance
+- technicalCompetency: Rate as "Excellent", "Good", "Average", "Below Average", or "Poor"
+- communicationSkills: Rate as "Excellent", "Good", "Average", "Below Average", or "Poor"
+- strengths: List 2-4 specific things the candidate did well
+- weaknesses: List 2-4 areas needing improvement
+- detailedFeedback: 2-3 sentences of constructive feedback
+- recommendations: 2-3 actionable tips for improvement
 
-Return this exact JSON structure:
-{"overallScore":75,"strengths":["strength one","strength two","strength three"],"weaknesses":["weakness one","weakness two"],"technicalCompetency":"Good","communicationSkills":"Good","detailedFeedback":"Your detailed feedback here as plain text.","recommendations":["recommendation one","recommendation two"],"questionWiseFeedback":[
-    {
-      "questionIndex": 0,
-      "score": 8,
-      "feedback": "Good answer, but could be more detailed",
-      "strengths": ["point 1"],
-      "improvements": ["point 2"]
-    }
-  ]
-}`;
+CRITICAL: Return ONLY valid JSON. No markdown code blocks. No backticks. Start with { and end with }.
+
+EXACT FORMAT REQUIRED:
+{"overallScore":65,"strengths":["Good understanding of basics","Clear communication"],"weaknesses":["Needs more depth","Could improve examples"],"technicalCompetency":"Average","communicationSkills":"Good","detailedFeedback":"The candidate showed basic understanding but needs to develop deeper technical knowledge. Communication was clear but answers lacked specific examples.","recommendations":["Study advanced concepts","Practice with real examples","Review documentation"]}`;
 
     // Try Gemini 2.5 Flash first, with fallbacks
     let response;
@@ -280,8 +280,11 @@ Return this exact JSON structure:
         overallScore: 50,
         strengths: ['Completed the interview', 'Attempted all questions'],
         weaknesses: ['Analysis could not be fully processed'],
+        technicalCompetency: 'Could not evaluate',
+        communicationSkills: 'Could not evaluate',
         detailedFeedback: 'Thank you for completing the interview. Your responses have been recorded. Due to a technical issue, detailed analysis could not be generated. Please try again or contact support.',
-        recommendations: ['Practice more', 'Review technical concepts']
+        recommendations: ['Practice more', 'Review technical concepts'],
+        questionWiseFeedback: []
       };
     }
     
@@ -458,6 +461,14 @@ exports.completeInterview = async (req, res) => {
 
     // Analyze interview
     const analysis = await analyzeInterview(interview.questions, interview.responses || []);
+    
+    console.log('[MockInterview] Analysis received:', JSON.stringify({
+      overallScore: analysis.overallScore,
+      technicalCompetency: analysis.technicalCompetency,
+      communicationSkills: analysis.communicationSkills,
+      strengthsCount: analysis.strengths?.length || 0,
+      weaknessesCount: analysis.weaknesses?.length || 0
+    }));
 
     // Update interview with analysis
     interview.interviewStatus = 'completed';
@@ -465,27 +476,35 @@ exports.completeInterview = async (req, res) => {
     interview.actualDuration = Math.round((interview.endTime - interview.startTime) / (1000 * 60));
     interview.questionsAnswered = (interview.responses || []).filter(r => r && r.transcript).length;
     
+    // Extract rating strings (Gemini returns these as strings)
+    const techRating = analysis.technicalCompetency || 'Not evaluated';
+    const commRating = analysis.communicationSkills || 'Not evaluated';
+    
     // Store analysis in proper format
     interview.analysis = {
-      overallScore: analysis.overallScore,
+      overallScore: analysis.overallScore || 0,
       strengths: analysis.strengths || [],
       weaknesses: analysis.weaknesses || [],
       technicalCompetency: {
-        rating: analysis.technicalCompetency || 'Could not evaluate',
+        rating: techRating,
         details: ''
       },
       communicationSkills: {
-        rating: analysis.communicationSkills || 'Could not evaluate',
+        rating: commRating,
         details: ''
       },
-      detailedFeedback: analysis.detailedFeedback || '',
+      problemSolving: {
+        rating: 'Not evaluated',
+        details: ''
+      },
+      detailedFeedback: analysis.detailedFeedback || 'No detailed feedback available.',
       recommendations: analysis.recommendations || [],
       questionWiseFeedback: (analysis.questionWiseFeedback || []).map((qf, idx) => ({
         questionIndex: qf.questionIndex || idx,
         question: interview.questions[qf.questionIndex || idx]?.question || '',
         userResponse: interview.responses[qf.questionIndex || idx]?.transcript || '',
-        score: qf.score,
-        feedback: qf.feedback,
+        score: qf.score || 0,
+        feedback: qf.feedback || '',
         strengths: qf.strengths || [],
         improvements: qf.improvements || [],
         skillAssessed: interview.questions[qf.questionIndex || idx]?.skill || 'General'
@@ -494,23 +513,25 @@ exports.completeInterview = async (req, res) => {
     };
     
     // Quick access score
-    interview.overallScore = analysis.overallScore;
+    interview.overallScore = analysis.overallScore || 0;
 
     await interview.save();
 
     console.log(`[MockInterview] Completed interview ${interview._id} with score ${analysis.overallScore}`);
+    console.log(`[MockInterview] Analysis - Tech: ${techRating}, Comm: ${commRating}`);
 
+    // Return analysis to frontend with proper structure
     res.json({
       success: true,
       analysis: {
-        overallScore: analysis.overallScore,
-        strengths: analysis.strengths,
-        weaknesses: analysis.weaknesses,
-        technicalCompetency: analysis.technicalCompetency,
-        communicationSkills: analysis.communicationSkills,
-        detailedFeedback: analysis.detailedFeedback,
-        recommendations: analysis.recommendations,
-        questionWiseFeedback: analysis.questionWiseFeedback
+        overallScore: analysis.overallScore || 0,
+        strengths: analysis.strengths || [],
+        weaknesses: analysis.weaknesses || [],
+        technicalCompetency: techRating,  // Send as string for frontend
+        communicationSkills: commRating,  // Send as string for frontend
+        detailedFeedback: analysis.detailedFeedback || 'No detailed feedback available.',
+        recommendations: analysis.recommendations || [],
+        questionWiseFeedback: analysis.questionWiseFeedback || []
       },
       attemptNumber: interview.attemptNumber,
       duration: interview.actualDuration

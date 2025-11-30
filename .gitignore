@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Environment files
+.env
+.env.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+
+# ML Model cache
+.cache/
+*.bin
+*.pt
+
+# Uploads
+uploads/
+
+# Temporary
+tmp/
+temp/
+

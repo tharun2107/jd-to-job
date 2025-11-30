@@ -10,9 +10,17 @@
 #     return list(skills)
 # skills_loader.py
 import pandas as pd
+import os
+from pathlib import Path
 from app.synonyms import SYNONYM_MAP
 
 def load_skills(path="grouped_skills_dataset.csv"):
+    # Resolve path relative to project root (ats-skill-analyzer directory)
+    if not os.path.isabs(path):
+        # Get the project root (parent of app directory)
+        project_root = Path(__file__).parent.parent
+        path = os.path.join(project_root, path)
+    
     df = pd.read_csv(path)
     df['Skill'] = df['Skill'].str.lower().str.strip()
     skills = set(df['Skill'].dropna().unique().tolist())
