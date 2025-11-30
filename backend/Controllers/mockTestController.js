@@ -2,24 +2,63 @@ const MockTest = require('../models/MockTest');
 const JD = require('../models/JD');
 const axios = require('axios');
 
-// Gemini API configuration
+// Gemini API configuration with Gemini 2.5 and fallbacks
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-//
-// --- THE FIX ---
-// Use a model name that is confirmed to be in your list of available models.
-//
-const GEMINI_MODEL = 'gemini-1.5-flash'; 
-
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash-exp';
+const GEMINI_SECONDARY_FALLBACK = 'gemini-1.5-flash';
+const GEMINI_API_URL = (model) => `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
 
 // Check if Gemini API key is configured
 if (!GEMINI_API_KEY) {
   console.error('❌ FATAL: GEMINI_API_KEY environment variable is not set!');
   console.error('Please add GEMINI_API_KEY=your_api_key_here to your .env file and restart the server.');
 } else {
-  console.log(`✅ GEMINI_API_KEY loaded successfully.`);
+  console.log(`✅ GEMINI_API_KEY loaded for MockTest. Primary model: ${GEMINI_MODEL}`);
 }
+
+// Helper function to call Gemini API with fallbacks
+const callGeminiAPI = async (prompt) => {
+  let response;
+  let modelUsed = GEMINI_MODEL;
+
+  try {
+    // Try Gemini 2.5 Flash first
+    response = await axios.post(`${GEMINI_API_URL(GEMINI_MODEL)}?key=${GEMINI_API_KEY}`, {
+      contents: [{ parts: [{ text: prompt }] }]
+    });
+    console.log(`✅ [MockTest] Using Gemini 2.5 Flash`);
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.log(`⚠️ [MockTest] Model ${GEMINI_MODEL} not available, trying ${GEMINI_FALLBACK_MODEL}`);
+      modelUsed = GEMINI_FALLBACK_MODEL;
+      try {
+        response = await axios.post(`${GEMINI_API_URL(GEMINI_FALLBACK_MODEL)}?key=${GEMINI_API_KEY}`, {
+          contents: [{ parts: [{ text: prompt }] }]
+        });
+        console.log(`✅ [MockTest] Using Gemini 2.0 Flash (fallback)`);
+      } catch (fallbackError) {
+        if (fallbackError.response?.status === 404) {
+          console.log(`⚠️ [MockTest] Model ${GEMINI_FALLBACK_MODEL} not available, using ${GEMINI_SECONDARY_FALLBACK}`);
+          modelUsed = GEMINI_SECONDARY_FALLBACK;
+          response = await axios.post(`${GEMINI_API_URL(GEMINI_SECONDARY_FALLBACK)}?key=${GEMINI_API_KEY}`, {
+            contents: [{ parts: [{ text: prompt }] }]
+          });
+          console.log(`✅ [MockTest] Using Gemini 1.5 Flash (secondary fallback)`);
+        } else {
+          throw fallbackError;
+        }
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  return {
+    text: response.data.candidates[0].content.parts[0].text,
+    model: modelUsed
+  };
+};
 
 // Time limits for different question counts
 const TIME_LIMITS = {
@@ -35,55 +74,56 @@ const generateQuestions = async (jdText, skills, numberOfQuestions) => {
   }
 
   try {
-    console.log(`--- Initiating Question Generation ---`);
-    console.log(`✅ Using Model: ${GEMINI_MODEL}`); // This will now show the correct, available model
-    console.log(`Target URL: ${GEMINI_API_URL}`);
+    console.log(`[MockTest] Generating ${numberOfQuestions} questions...`);
 
-    const prompt = `You are an expert technical interviewer. Based on the following Job Description (JD), create ${numberOfQuestions} multiple choice questions (MCQs) for a mock exam. Each question should:
-- Be relevant to the JD and the listed skills: ${skills.join(', ')}
-- Have exactly 4 options (A, B, C, D)
-- Vary in difficulty as appropriate for the JD
-- Focus on practical, real-world scenarios
-- Cover a range of topics from the JD
+    const prompt = `Generate ${numberOfQuestions} multiple choice questions for a technical assessment.
 
-Job Description:
-"""
-${jdText}
-"""
+Job Description: ${jdText.substring(0, 2000)}
+Required Skills: ${skills.slice(0, 15).join(', ')}
 
-Return the result in this exact JSON format:
-{
-  "questions": [
-    {
-      "question": "Question text here?",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "skill": "skill_name"
-    }
-  ]
-}
-Note: correctAnswer should be the index (0-3) of the correct option.`;
+Create questions that:
+- Test practical knowledge of the skills
+- Have exactly 4 options each
+- Mix easy, medium, and hard difficulty
+- Cover different topics from the JD
 
-    console.log('🚀 Making request to Gemini API...');
-    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: [{ parts: [{ text: prompt }] }]
-    });
+CRITICAL: Return ONLY valid JSON. No markdown, no code blocks. Start with { and end with }.
 
-    console.log('✅ Gemini API response received');
-    const generatedText = response.data.candidates[0].content.parts[0].text;
+{"questions":[{"question":"What is...?","options":["Option A","Option B","Option C","Option D"],"correctAnswer":0,"skill":"JavaScript"}]}
+
+Note: correctAnswer is the index (0-3) of the correct option.`;
+
+    const result = await callGeminiAPI(prompt);
+    console.log(`[MockTest] Response from ${result.model}`);
     
-    // Clean potential markdown formatting from the response
-    const cleanedText = generatedText.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Clean and parse response
+    let cleanedText = result.text
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+    
+    // Find JSON object
+    const firstBrace = cleanedText.indexOf('{');
+    const lastBrace = cleanedText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+    }
+    
+    // Fix common JSON issues
+    cleanedText = cleanedText
+      .replace(/,(\s*[}\]])/g, '$1')
+      .replace(/`/g, '');
+    
     const questionsData = JSON.parse(cleanedText);
     
-    console.log('✅ Parsed questions data successfully.');
+    if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
+      throw new Error('Invalid questions format');
+    }
+    
+    console.log(`[MockTest] Generated ${questionsData.questions.length} questions successfully`);
     return questionsData.questions;
   } catch (error) {
-    console.error('❌ Error generating questions:', error.message);
-    if (error.response) {
-      console.error('🔍 API Response Status:', error.response.status);
-      console.error('🔍 API Response Data:', JSON.stringify(error.response.data, null, 2));
-    }
+    console.error('[MockTest] Error generating questions:', error.message);
     throw new Error(`Failed to generate questions: ${error.message}`);
   }
 };
@@ -91,49 +131,82 @@ Note: correctAnswer should be the index (0-3) of the correct option.`;
 // Evaluate answers using Gemini API (with explanation and suggestion)
 const evaluateAnswers = async (questions, userAnswers) => {
   try {
-    const prompt = `Evaluate the following user answers for a technical mock exam. For each question, provide:
-- Whether the answer is correct
-- The correct answer
-- A detailed explanation
-- If the user was wrong, a suggestion to improve on the specific topic/skill
-
-Questions and User Answers:
-${questions.map((q, index) => `
-Question ${index + 1}: ${q.question}
-Options: ${q.options.map((opt, i) => `${i}: ${opt}`).join(', ')}
-Correct Answer: ${q.options[q.correctAnswer]}
-User's Answer: ${q.options[userAnswers[index]?.selectedOption || 0]}
-Skill: ${q.skill}
-`).join('\n')}
-
-Return the evaluation in this exact JSON format:
-{
-  "totalScore": 15,
-  "percentage": 75.0,
-  "feedback": [
-    {
-      "questionIndex": 0,
-      "isCorrect": true,
-      "correctAnswer": "Correct answer text",
-      "explanation": "Detailed explanation why this is correct",
-      "suggestion": "Suggestion to improve if wrong, else empty string",
-      "skillFocus": "Specific skill area to focus on"
-    }
-  ],
-  "overallFeedback": "Overall performance feedback",
-  "areasToImprove": ["Area 1", "Area 2", "Area 3"]
-}`;
-
-    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: [{ parts: [{ text: prompt }] }]
+    // Calculate basic score first
+    let correctCount = 0;
+    userAnswers.forEach((answer, index) => {
+      if (answer.selectedOption === questions[index].correctAnswer) {
+        correctCount++;
+      }
     });
-    const generatedText = response.data.candidates[0].content.parts[0].text;
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Invalid response format from Gemini API');
-    const evaluationData = JSON.parse(jsonMatch[0]);
+    const basicScore = correctCount;
+    const basicPercentage = Math.round((correctCount / questions.length) * 100);
+
+    const qaSummary = questions.map((q, index) => 
+      `Q${index + 1} (${q.skill}): ${q.question}\nCorrect: ${q.options[q.correctAnswer]}\nUser chose: ${q.options[userAnswers[index]?.selectedOption ?? 0]}\nResult: ${userAnswers[index]?.selectedOption === q.correctAnswer ? 'CORRECT' : 'WRONG'}`
+    ).join('\n\n');
+
+    const prompt = `Evaluate this mock test and provide feedback.
+
+Test Results:
+${qaSummary}
+
+Score: ${correctCount}/${questions.length} (${basicPercentage}%)
+
+Provide feedback for each question and overall assessment.
+
+CRITICAL: Return ONLY valid JSON. No markdown. Start with { end with }.
+
+{"totalScore":${correctCount},"percentage":${basicPercentage},"feedback":[{"questionIndex":0,"isCorrect":true,"correctAnswer":"answer text","explanation":"why this is correct","suggestion":"tip to improve","skillFocus":"skill name"}],"overallFeedback":"Overall performance summary","areasToImprove":["Area 1","Area 2"]}`;
+
+    const result = await callGeminiAPI(prompt);
+    console.log(`[MockTest] Evaluation from ${result.model}`);
+    
+    // Extract JSON
+    let cleanedText = result.text
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+    
+    const firstBrace = cleanedText.indexOf('{');
+    const lastBrace = cleanedText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+    }
+    
+    // Fix common JSON issues
+    cleanedText = cleanedText
+      .replace(/,(\s*[}\]])/g, '$1')
+      .replace(/`/g, '');
+    
+    let evaluationData;
+    try {
+      evaluationData = JSON.parse(cleanedText);
+    } catch (parseError) {
+      console.error('[MockTest] JSON parse error, using fallback evaluation');
+      // Return fallback evaluation
+      return {
+        totalScore: basicScore,
+        percentage: basicPercentage,
+        feedback: questions.map((q, idx) => ({
+          questionIndex: idx,
+          isCorrect: userAnswers[idx]?.selectedOption === q.correctAnswer,
+          correctAnswer: q.options[q.correctAnswer],
+          explanation: `The correct answer is "${q.options[q.correctAnswer]}"`,
+          suggestion: userAnswers[idx]?.selectedOption === q.correctAnswer ? '' : `Review ${q.skill} concepts`,
+          skillFocus: q.skill
+        })),
+        overallFeedback: `You scored ${basicScore} out of ${questions.length} (${basicPercentage}%). ${basicPercentage >= 70 ? 'Good job!' : 'Keep practicing!'}`,
+        areasToImprove: [...new Set(questions.filter((q, idx) => userAnswers[idx]?.selectedOption !== q.correctAnswer).map(q => q.skill))].slice(0, 3)
+      };
+    }
+    
+    // Ensure required fields exist
+    evaluationData.totalScore = evaluationData.totalScore ?? basicScore;
+    evaluationData.percentage = evaluationData.percentage ?? basicPercentage;
+    
     return evaluationData;
   } catch (error) {
-    console.error('Error evaluating answers:', error);
+    console.error('[MockTest] Error evaluating answers:', error);
     throw new Error('Failed to evaluate answers');
   }
 };

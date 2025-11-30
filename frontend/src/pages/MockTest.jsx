@@ -994,6 +994,9 @@ const MockTest = () => {
   const [selectedAttempt, setSelectedAttempt] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  
+  // Exam result state
+  const [examResult, setExamResult] = useState(null);
 
   // Time limits for different question counts
   const TIME_LIMITS = {
@@ -1165,8 +1168,9 @@ const MockTest = () => {
       });
 
       console.log('Exam submitted:', response.data);
+      // Store the results
+      setExamResult(response.data.result);
       setCurrentView('results');
-      // You can store the results in state if needed
 
     } catch (error) {
       console.error('Error submitting exam:', error);
@@ -1981,38 +1985,173 @@ const MockTest = () => {
           )}
 
           {/* Results View */}
-          {currentView === 'results' && (
-            <div style={{ textAlign: 'center' }}>
+          {currentView === 'results' && examResult && (
+            <div style={{ maxWidth: 800, margin: '0 auto' }}>
               <h2 style={{
                 color: '#1e293b',
                 fontSize: 28,
                 fontWeight: 700,
-                marginBottom: 16
+                marginBottom: 16,
+                textAlign: 'center'
               }}>
-                Assessment Completed!
+                Assessment Completed! 🎉
               </h2>
-              <p style={{
-                color: '#64748b',
-                fontSize: 16,
-                marginBottom: 40
+              
+              {/* Score Display */}
+              <div style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: 16,
+                padding: 32,
+                textAlign: 'center',
+                marginBottom: 24,
+                color: 'white'
               }}>
-                Your assessment has been submitted successfully.
-              </p>
-              <button
-                onClick={() => setCurrentView('main')}
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '16px 32px',
+                <div style={{ fontSize: 64, fontWeight: 700 }}>
+                  {examResult.percentage}%
+                </div>
+                <div style={{ fontSize: 18, opacity: 0.9 }}>
+                  Score: {examResult.totalScore} / {currentExam?.questions?.length || questionCount}
+                </div>
+                {examResult.timeTaken && (
+                  <div style={{ fontSize: 14, opacity: 0.8, marginTop: 8 }}>
+                    Time taken: {examResult.timeTaken} minutes
+                  </div>
+                )}
+              </div>
+
+              {/* Overall Feedback */}
+              {examResult.overallFeedback && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #86efac',
                   borderRadius: 12,
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  fontWeight: 700
-                }}
-              >
-                Take Another Assessment
-              </button>
+                  padding: 20,
+                  marginBottom: 24
+                }}>
+                  <h3 style={{ color: '#166534', marginBottom: 8, fontSize: 16, fontWeight: 600 }}>
+                    Overall Feedback
+                  </h3>
+                  <p style={{ color: '#15803d', margin: 0, lineHeight: 1.6 }}>
+                    {examResult.overallFeedback}
+                  </p>
+                </div>
+              )}
+
+              {/* Areas to Improve */}
+              {examResult.areasToImprove && examResult.areasToImprove.length > 0 && (
+                <div style={{
+                  background: '#fef3c7',
+                  border: '1px solid #fcd34d',
+                  borderRadius: 12,
+                  padding: 20,
+                  marginBottom: 24
+                }}>
+                  <h3 style={{ color: '#92400e', marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
+                    Areas to Improve
+                  </h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {examResult.areasToImprove.map((area, idx) => (
+                      <span key={idx} style={{
+                        background: '#fef08a',
+                        color: '#854d0e',
+                        padding: '6px 12px',
+                        borderRadius: 20,
+                        fontSize: 14,
+                        fontWeight: 500
+                      }}>
+                        {area}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Question-wise Feedback */}
+              {examResult.feedback && examResult.feedback.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <h3 style={{ color: '#1e293b', marginBottom: 16, fontSize: 18, fontWeight: 600 }}>
+                    Question-wise Feedback
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {examResult.feedback.map((fb, idx) => (
+                      <div key={idx} style={{
+                        background: fb.isCorrect ? '#f0fdf4' : '#fef2f2',
+                        border: `1px solid ${fb.isCorrect ? '#86efac' : '#fca5a5'}`,
+                        borderRadius: 12,
+                        padding: 16
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 20 }}>{fb.isCorrect ? '✅' : '❌'}</span>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>Question {idx + 1}</span>
+                          {fb.skillFocus && (
+                            <span style={{
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              padding: '2px 8px',
+                              borderRadius: 12,
+                              fontSize: 12
+                            }}>
+                              {fb.skillFocus}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ color: '#475569', margin: '0 0 8px 0', fontSize: 14 }}>
+                          <b>Correct Answer:</b> {fb.correctAnswer}
+                        </p>
+                        {fb.explanation && (
+                          <p style={{ color: '#64748b', margin: '0 0 8px 0', fontSize: 14 }}>
+                            <b>Explanation:</b> {fb.explanation}
+                          </p>
+                        )}
+                        {!fb.isCorrect && fb.suggestion && (
+                          <p style={{ color: '#ea580c', margin: 0, fontSize: 14 }}>
+                            <b>💡 Tip:</b> {fb.suggestion}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    setCurrentView('main');
+                    setExamResult(null);
+                    setCurrentExam(null);
+                    setExamStarted(false);
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '16px 32px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    fontWeight: 700
+                  }}
+                >
+                  Take Another Assessment
+                </button>
+                <button
+                  onClick={() => setCurrentView('history')}
+                  style={{
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    padding: '16px 32px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    fontWeight: 600
+                  }}
+                >
+                  View History
+                </button>
+              </div>
             </div>
           )}
 
